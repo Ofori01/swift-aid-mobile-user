@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:swiftaid_user/screens/onboarding/onboarding_screens.dart';
 import './settings_screen.dart'; 
 import './main_tabs.dart'; 
 import './privacyPolicy_screen.dart'; 
@@ -30,6 +31,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
       email = prefs.getString('userEmail') ?? '';
       phone = prefs.getString('userPhone') ?? '';
     });
+  }
+
+  Future<void> logout(BuildContext context) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear();
+
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => const OnboardingScreen()),
+      (route) => false,
+    );
   }
 
   @override
@@ -101,7 +113,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     );
                   }),
                   _buildMenuItem(icon: Icons.help, title: "Help", onTap: () {}),
-                  _buildMenuItem(icon: Icons.logout, title: "Logout", onTap: () {}),
+                  _buildMenuItem(
+                    icon: Icons.logout,
+                    title: "Logout",
+                    onTap: () async {
+                      final shouldLogout = await showDialog<bool>(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: const Text("Confirm Logout"),
+                          content: const Text("Are you sure you want to logout?"),
+                          actions: [
+                            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Cancel")),
+                            TextButton(onPressed: () => Navigator.pop(context, true), child: const Text("Logout")),
+                          ],
+                        ),
+                      );
+
+                      if (shouldLogout ?? false) {
+                        await logout(context);
+                      }
+                    },
+                  ),
                 ],
               ),
             )
