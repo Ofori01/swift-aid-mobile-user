@@ -1,9 +1,23 @@
 import 'package:flutter/material.dart';
+import '../screens/startupRedirectScreen.dart';
 import 'package:provider/provider.dart';
-import 'screens/onboarding/splash_screen.dart';
 import 'core/theme_provider.dart';
+import 'package:socket_io_client/socket_io_client.dart' as IO;
+
+
+late IO.Socket socket;
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  socket = IO.io(
+    'http://10.0.2.2:8080',  // Change this if needed
+    IO.OptionBuilder()
+      .setTransports(['websocket']) // Only websocket
+      .disableAutoConnect()
+      .build(),
+  );
+
   runApp(
     ChangeNotifierProvider(
       create: (_) => ThemeProvider(),
@@ -18,32 +32,38 @@ class SwiftAidApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
-    
+
+    // Connect socket here AFTER app is running
+    Future.delayed(Duration.zero, () {
+      if (!socket.connected) {
+        socket.connect();
+        socket.onConnect((_) {
+          print('✅ Socket Connected');
+          socket.emit('msg', 'test');
+        });
+        socket.onConnectError((data) => print('❌ Connect Error: $data'));
+        socket.onError((data) => print('❌ Socket Error: $data'));
+        socket.onDisconnect((_) => print('⚠️ Disconnected'));
+      }
+    });
+
     return MaterialApp(
       title: 'SwiftAid User',
       debugShowCheckedModeBanner: false,
-
+      themeMode: themeProvider.themeMode,
       theme: ThemeData(
         brightness: Brightness.light,
         primarySwatch: Colors.red,
         scaffoldBackgroundColor: Colors.white,
-        textTheme: const TextTheme(
-          bodyLarge: TextStyle(color: Colors.black),
-        ),
+        textTheme: const TextTheme(bodyLarge: TextStyle(color: Colors.black)),
       ),
-
       darkTheme: ThemeData(
         brightness: Brightness.dark,
         primarySwatch: Colors.red,
         scaffoldBackgroundColor: Colors.black,
-        textTheme: const TextTheme(
-          bodyLarge: TextStyle(color: Colors.white),
-        ),
+        textTheme: const TextTheme(bodyLarge: TextStyle(color: Colors.white)),
       ),
-
-      themeMode: themeProvider.themeMode, 
-
-      home: const SplashScreen(),
+      home: const StartupRedirectScreen(),
     );
   }
 }

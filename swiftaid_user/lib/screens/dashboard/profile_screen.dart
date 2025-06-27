@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:swiftaid_user/screens/onboarding/onboarding_screens.dart';
+import '../onboarding/onboarding_screens.dart';
 import './settings_screen.dart'; 
 import './main_tabs.dart'; 
 import './privacyPolicy_screen.dart'; 

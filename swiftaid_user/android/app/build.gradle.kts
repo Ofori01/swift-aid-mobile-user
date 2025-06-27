@@ -4,7 +4,7 @@ import java.io.FileInputStream
 val localProperties = Properties().apply {
     load(FileInputStream(rootProject.file("local.properties")))
 }
-val googleMapsApiKey: String = localProperties.getProperty("GOOGLE_MAPS_API_KEY")
+val googleMapsApiKey: String? = localProperties["GOOGLE_MAPS_API_KEY"] as? String
 
 
 plugins {
@@ -17,7 +17,7 @@ plugins {
 android {
     namespace = "com.example.swiftaid_user"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = flutter.ndkVersion
+    ndkVersion = "27.0.12077973"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
@@ -37,7 +37,7 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
-        manifestPlaceholders["googleMapsApiKey"] = googleMapsApiKey
+        manifestPlaceholders["googleMapsApiKey"] = googleMapsApiKey ?: ""
     }
 
     buildTypes {

@@ -4,7 +4,6 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../auth/signup/signup_step1_userinfo.dart';
-// import '../dashboard/user_dashboard.dart';
 import '../dashboard/main_tabs.dart'; 
 
 
@@ -29,6 +28,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _passwordController = TextEditingController();
 
   bool _isLoading = false;
+  bool _obscureLoginPassword = true;
+
 
   Future<void> _handleLogin() async {
     final phone = _phoneController.text.trim();
@@ -63,9 +64,6 @@ class _LoginScreenState extends State<LoginScreen> {
           data['token'],
         );
 
-
-        
-
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Login successful")),
         );
@@ -75,11 +73,6 @@ class _LoginScreenState extends State<LoginScreen> {
           MaterialPageRoute(builder: (_) => const MainTabs()),
         );
 
-
-        // Navigator.pushReplacement(
-        //   context,
-        //   MaterialPageRoute(builder: (_) => const UserDashboard()),
-        // );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(data['message'] ?? "Login failed")),
@@ -118,9 +111,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Image.asset('assets/images/swift_aid_logo.png',
-                              width: 32, height: 32),
-                          const SizedBox(width: 10),
+                          Image.asset('assets/images/swift_aid_logo2.jpg',
+                              width: 40),
+                          const SizedBox(width: 5),
                           const Text('SwiftAid',
                               style: TextStyle(
                                   fontSize: 28, fontWeight: FontWeight.bold)),
@@ -139,7 +132,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           prefixIcon: Icon(Icons.phone),
                           hintText: 'Phone Number',
                           filled: true,
-                          fillColor: Color(0xFFF0F0F0),
+                          // fillColor: Color(0xFFF0F0F0),
                           border: OutlineInputBorder(
                               borderRadius: BorderRadius.all(Radius.circular(10)),
                               borderSide: BorderSide.none),
@@ -149,15 +142,25 @@ class _LoginScreenState extends State<LoginScreen> {
 
                       TextField(
                         controller: _passwordController,
-                        obscureText: true,
-                        decoration: const InputDecoration(
-                          prefixIcon: Icon(Icons.lock),
+                        obscureText: _obscureLoginPassword,
+                        decoration: InputDecoration(
+                          prefixIcon: const Icon(Icons.lock),
                           hintText: 'Password',
                           filled: true,
-                          fillColor: Color(0xFFF0F0F0),
-                          border: OutlineInputBorder(
-                              borderRadius: BorderRadius.all(Radius.circular(10)),
-                              borderSide: BorderSide.none),
+                          border: const OutlineInputBorder(
+                            borderRadius: BorderRadius.all(Radius.circular(10)),
+                            borderSide: BorderSide.none,
+                          ),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscureLoginPassword ? Icons.visibility_off : Icons.visibility,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _obscureLoginPassword = !_obscureLoginPassword;
+                              });
+                            },
+                          ),
                         ),
                       ),
                       const SizedBox(height: 10),
@@ -178,7 +181,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10)),
+                            borderRadius: BorderRadius.circular(10)),
                         ),
                         child: _isLoading
                             ? const CircularProgressIndicator(color: Colors.white)

@@ -33,11 +33,46 @@ class _EmergencyRequestScreenState extends State<EmergencyRequestScreen> {
   }
 
   Future<void> _pickImage() async {
-    final picker = ImagePicker();
-    final picked = await picker.pickImage(source: ImageSource.gallery);
-    if (picked != null) {
-      setState(() => _image = File(picked.path));
-    }
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text("Select Image Source", style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 10),
+              ListTile(
+                leading: const Icon(Icons.camera_alt),
+                title: const Text("Use Camera"),
+                onTap: () async {
+                  Navigator.pop(context);
+                  final picked = await ImagePicker().pickImage(source: ImageSource.camera);
+                  if (picked != null) {
+                    setState(() => _image = File(picked.path));
+                  }
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo),
+                title: const Text("Choose from Gallery"),
+                onTap: () async {
+                  Navigator.pop(context);
+                  final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
+                  if (picked != null) {
+                    setState(() => _image = File(picked.path));
+                  }
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   Future<void> _loadLocation() async {
@@ -94,8 +129,8 @@ class _EmergencyRequestScreenState extends State<EmergencyRequestScreen> {
       final response = await http.Response.fromStream(streamedResponse);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
+        
         var data = json.decode(response.body);
-
         final responders = data["response"]["responders"];
         final emergencyDetails = data["response"]["emergency_details"];
 
@@ -144,7 +179,7 @@ class _EmergencyRequestScreenState extends State<EmergencyRequestScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Emergency Request")),
+      appBar: AppBar(title: const Text("Report Emergency")),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(

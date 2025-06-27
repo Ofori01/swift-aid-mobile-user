@@ -1,7 +1,15 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import '../emergency/map_screen.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
+import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 import 'package:lottie/lottie.dart';
+import 'package:mime/mime.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../emergency/emergency_request_screen.dart';
 
 class UserDashboard extends StatefulWidget {
@@ -65,11 +73,15 @@ class EmergencyChip extends StatelessWidget {
 
 
 class _UserDashboardState extends State<UserDashboard> {
+  bool _isLoading = false;
   String userLocation = "Fetching location...";
+  String? userName;
+
 
   @override
   void initState() {
     super.initState();
+    _loadUserName();
     getUserLocation().then((location) {
       setState(() {
         userLocation = location;
@@ -78,6 +90,12 @@ class _UserDashboardState extends State<UserDashboard> {
     });
   }
 
+  Future<void> _loadUserName() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      userName = prefs.getString('userName') ?? 'User';
+    });
+  }
   void _navigateToRequest(String type, BuildContext context) {
     Navigator.push(
       context,
@@ -115,20 +133,100 @@ class _UserDashboardState extends State<UserDashboard> {
     return "${place.street}, ${place.locality}";
   }
 
+  Future<Position> _getLocation() async {
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) throw Exception("Location services are disabled.");
+
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.deniedForever) throw Exception("Location permission denied forever.");
+    }
+
+    return await Geolocator.getCurrentPosition();
+  }
+
+  Future<void> _submitEmergency() async {
+    try {
+      setState(() => _isLoading = true);
+
+      final location = await _getLocation();
+      final uri = Uri.parse("http://10.0.2.2:8080/emergency/create");
+
+      final request = http.MultipartRequest('POST', uri)
+        ..fields['user_description'] = "I need help urgently"
+        ..fields['emergency_type'] = "Other"
+        ..fields['emergency_location'] = '[${location.latitude},${location.longitude}]';
+
+      // Load image from assets as bytes
+      ByteData byteData = await rootBundle.load('assets/icons/police_icon.jpeg');
+      Uint8List imageBytes = byteData.buffer.asUint8List();
+
+      // print(imageBytes)
+
+      // Detect MIME type
+      final mimeType = lookupMimeType('police_icon.jpeg', headerBytes: imageBytes)!.split('/');
+
+      // Add image directly from memory
+      request.files.add(http.MultipartFile.fromBytes(
+        'image',
+        imageBytes,
+        filename: 'police_icon.jpeg',
+        contentType: MediaType(mimeType[0], mimeType[1]),
+      ));
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+
+        var data = json.decode(response.body);
+        final responders = data["response"]["responders"];
+        final emergencyDetails = data["response"]["emergency_details"];
+
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => ResponderMapScreen(
+            responders: responders as Map<String, dynamic>,
+            emergencyDetails: emergencyDetails as Map<String, dynamic>
+          )),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Failed to create request.")));
+      }
+    } catch (e) {
+      debugPrint("Error: ${e.toString()}");
+
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Something went wrong.")));
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
   
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Scaffold(
-      // backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Location Display
-              Row(
+        child: Column(
+          children: [
+            // 🔒 Fixed Header: Location + Notification
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12),
+              decoration: BoxDecoration(
+                color: theme.scaffoldBackgroundColor,
+                boxShadow: [
+                  BoxShadow(
+                    color: isDark ? Colors.white12 : Colors.black12,
+                    offset: const Offset(0, 2),
+                    blurRadius: 4,
+                  ),
+                ],
+              ),
+              child: Row(
                 children: [
                   const Icon(Icons.location_pin, color: Colors.red),
                   const SizedBox(width: 8),
@@ -136,145 +234,161 @@ class _UserDashboardState extends State<UserDashboard> {
                     child: Text(
                       userLocation,
                       style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                      overflow: TextOverflow.ellipsis,
                     ),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.notifications_active, color: theme.iconTheme.color),
+                    onPressed: () {
+                      // TODO: Navigate to notifications
+                    },
                   ),
                 ],
               ),
-              const SizedBox(height: 24),
+            ),
+            
 
-              // Emergency Header
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
-                        Text(
-                          'Are you in an emergency?',
-                          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                        ),
-                        SizedBox(height: 8),
-                        Text(
-                          'Press the SOS button, your live location will be shared with the nearest help centre.',
-                          style: TextStyle(fontSize: 16, color: Colors.grey),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Lottie.asset('assets/lottie/dashboard1.json', width: 100, height: 100),
-                ],
+            // 🔄 Scrollable Responsive Body
+            Expanded(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  return SingleChildScrollView(
+                    padding: const EdgeInsets.all(16.0),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                      child: IntrinsicHeight(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            
+                            // Emergency Header
+                            // Welcome + Emergency Header
+Column(
+  crossAxisAlignment: CrossAxisAlignment.start,
+  children: [
+    Text(
+      'Welcome, ${userName ?? 'User'} 👋',
+      style: const TextStyle(
+        fontSize: 18,
+        fontWeight: FontWeight.w600,
+      ),
+    ),
+    const SizedBox(height: 12),
+    Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: const [
+              Text(
+                'Are you in an emergency?',
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
               ),
-
-              const SizedBox(height: 30),
-
-              // SOS Button
-              Center(
-                child: GestureDetector(
-                  onLongPress: () {
-                    // Handle SOS request trigger
-                  },
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      SizedBox(
-                        width: 200,
-                        height: 200,
-                        child: Lottie.asset("assets/lottie/sos_button.json"),
-                      ),
-                      const Text(
-                        'SOS',
-                        style: TextStyle(
-                          fontSize: 28,
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          shadows: [
-                            Shadow(
-                              color: Colors.black54,
-                              blurRadius: 4,
-                              offset: Offset(1, 1),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+              SizedBox(height: 8),
+              Text(
+                'Press the SOS button, your live location will be shared with the nearest help centre.',
+                style: TextStyle(fontSize: 16, color: Colors.grey),
               ),
-
-              const SizedBox(height: 30),
-
-              const Text(
-                "What's your emergency?",
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-              ),
-
-              const SizedBox(height: 10),
-              Wrap(
-                spacing: 5,
-                runSpacing: 10,
-                children: [
-                  GestureDetector(
-                    onTap: () => _navigateToRequest("Medical", context),
-                    child: const EmergencyChip(
-                      icon: Icons.medical_services,
-                      label: "Medical",
-                      bgColor: Color(0xFFE9F99C),
-                      iconColor: Colors.black,
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: () => _navigateToRequest("Violence", context),
-                    child: const EmergencyChip(
-                      icon: Icons.security,
-                      label: "Violence",
-                      bgColor: Color(0xFFFFC3E3),
-                      iconColor: Colors.black,
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: () => _navigateToRequest("Accident", context),
-                    child: const EmergencyChip(
-                      icon: Icons.car_crash,
-                      label: "Accident",
-                      bgColor: Color(0xFFE0D7FF),
-                      iconColor: Colors.black,
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: () => _navigateToRequest("Natural Disaster", context),
-                    child: const EmergencyChip(
-                      icon: Icons.apartment,
-                      label: "Natural disaster",
-                      bgColor: Color(0xFFC2F2E8),
-                      iconColor: Colors.black,
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: () => _navigateToRequest("Fire", context),
-                    child: const EmergencyChip(
-                      icon: Icons.local_fire_department,
-                      label: "Fire",
-                      bgColor: Color(0xFFFFD6DA),
-                      iconColor: Colors.black,
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: () => _navigateToRequest("Rescue", context),
-                    child: const EmergencyChip(
-                      icon: Icons.sos,
-                      label: "Rescue",
-                      bgColor: Color(0xFFFFEDB1),
-                      iconColor: Colors.black,
-                    ),
-                  ),
-                ],
-              ),
-
-
-
             ],
           ),
         ),
+        SizedBox(width: 10),
+        Lottie.asset('assets/lottie/dashboard1.json', width: 105),
+      ],
+    ),
+  ],
+),
+
+
+                            const SizedBox(height: 30),
+
+                            // SOS Button
+                            Center(
+                              child: GestureDetector(
+                                onLongPress: _isLoading
+                                    ? null
+                                    : () async {
+                                        HapticFeedback.vibrate();
+                                        await _submitEmergency();
+                                      },
+                                child: Stack(
+                                  alignment: Alignment.center,
+                                  children: [
+                                    SizedBox(
+                                      width: 200,
+                                      height: 200,
+                                      child: Lottie.asset("assets/lottie/sos_button.json"),
+                                    ),
+                                    _isLoading
+                                        ? const CircularProgressIndicator(
+                                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                          )
+                                        : const Text(
+                                            'SOS',
+                                            style: TextStyle(
+                                              fontSize: 28,
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.bold,
+                                              shadows: [
+                                                Shadow(
+                                                  color: Colors.black54,
+                                                  blurRadius: 4,
+                                                  offset: Offset(1, 1),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                  ],
+                                ),
+                              ),
+                            ),
+
+                            const SizedBox(height: 30),
+
+                            const Text(
+                              "What's your emergency?",
+                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                            ),
+                            const SizedBox(height: 10),
+
+                            // Emergency Type Chips
+                            Wrap(
+                              spacing: 5,
+                              runSpacing: 10,
+                              children: [
+                                _buildChip("Medical", Icons.medical_services, const Color(0xFFE9F99C)),
+                                _buildChip("Violence", Icons.security, const Color(0xFFFFC3E3)),
+                                _buildChip("Accident", Icons.car_crash, const Color(0xFFE0D7FF)),
+                                _buildChip("Natural Disaster", Icons.apartment, const Color(0xFFC2F2E8)),
+                                _buildChip("Fire", Icons.local_fire_department, const Color(0xFFFFD6DA)),
+                                _buildChip("Rescue", Icons.sos, const Color(0xFFFFEDB1)),
+                              ],
+                            ),
+
+                            const SizedBox(height: 20),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildChip(String label, IconData icon, Color bgColor) {
+    return GestureDetector(
+      onTap: () => _navigateToRequest(label, context),
+      child: EmergencyChip(
+        icon: icon,
+        label: label,
+        bgColor: bgColor,
+        iconColor: Colors.black,
       ),
     );
   }

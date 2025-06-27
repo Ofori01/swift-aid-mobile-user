@@ -32,7 +32,7 @@ class _SplashScreenState extends State<SplashScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Image(
-              image: AssetImage('assets/images/swift_aid_logo.png'),
+              image: AssetImage('assets/images/swift_aid_logo2.jpg'),
               width: 150,
               height: 150,
             ),

@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
-// import 'package:provider/provider.dart';
-// import '../../core/theme_provider.dart'; // adjust if in a different folder
 import '../../screens/auth/login_screen.dart';
 
 

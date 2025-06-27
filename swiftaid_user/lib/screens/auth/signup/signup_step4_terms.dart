@@ -70,7 +70,7 @@ class _SignupStep4TermsState extends State<SignupStep4Terms> {
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Error: ${resBody}")),
+          SnackBar(content: Text("Error: $resBody")),
         );
       }
     } catch (e) {
@@ -115,9 +115,9 @@ class _SignupStep4TermsState extends State<SignupStep4Terms> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red,
                 foregroundColor: Colors.white,
+                minimumSize: const Size.fromHeight(50),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10)),
-                minimumSize: const Size.fromHeight(50),
               ),
               child: isSubmitting
                   ? const CircularProgressIndicator(color: Colors.white)

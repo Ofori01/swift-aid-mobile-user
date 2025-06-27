@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:intl_phone_field/intl_phone_field.dart';
+
 
 import '../../../models/signup_data.dart';
 import 'signup_step2_otp.dart';
@@ -16,6 +18,9 @@ class _SignupStep1UserInfoState extends State<SignupStep1UserInfo> {
   final _formKey = GlobalKey<FormState>();
   final SignupData _signupData = SignupData();
   bool _isLoading = false;
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
+
 
   Future<void> _sendOtpAndContinue() async {
     if (_formKey.currentState!.validate()) {
@@ -104,24 +109,37 @@ class _SignupStep1UserInfoState extends State<SignupStep1UserInfo> {
                   const SizedBox(height: 16),
 
                   // Phone Number
-                  TextFormField(
-                    keyboardType: TextInputType.phone,
+                  IntlPhoneField(
                     decoration: const InputDecoration(
                       labelText: 'Phone Number',
                       border: OutlineInputBorder(),
                     ),
-                    onChanged: (value) => _signupData.phoneNumber = value,
-                    validator: (value) =>
-                        value == null || value.isEmpty ? 'Required' : null,
+                    initialCountryCode: 'GH', // Ghana by default
+                    onChanged: (phone) {
+                      _signupData.phoneNumber = phone.completeNumber; // saves +233xxxxxxxxx
+                    },
+                    validator: (phone) =>
+                        phone == null || phone.number.isEmpty ? 'Required' : null,
                   ),
+
                   const SizedBox(height: 16),
 
                   // Password
                   TextFormField(
-                    obscureText: true,
-                    decoration: const InputDecoration(
+                    obscureText: _obscurePassword,
+                    decoration: InputDecoration(
                       labelText: 'Password',
-                      border: OutlineInputBorder(),
+                      border: const OutlineInputBorder(),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _obscurePassword = !_obscurePassword;
+                          });
+                        },
+                      ),
                     ),
                     onChanged: (value) => _signupData.password = value,
                     validator: (value) =>
@@ -131,10 +149,20 @@ class _SignupStep1UserInfoState extends State<SignupStep1UserInfo> {
 
                   // Confirm Password
                   TextFormField(
-                    obscureText: true,
-                    decoration: const InputDecoration(
+                    obscureText: _obscureConfirmPassword,
+                    decoration: InputDecoration(
                       labelText: 'Confirm Password',
-                      border: OutlineInputBorder(),
+                      border: const OutlineInputBorder(),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscureConfirmPassword ? Icons.visibility_off : Icons.visibility,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _obscureConfirmPassword = !_obscureConfirmPassword;
+                          });
+                        },
+                      ),
                     ),
                     onChanged: (value) => _signupData.confirmPassword = value,
                     validator: (value) => value != _signupData.password

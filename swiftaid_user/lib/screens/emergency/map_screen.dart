@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
+import '../../widgets/emergency_responders_bottom_sheet.dart';
+
 
 class ResponderMapScreen extends StatefulWidget {
   final Map<String, dynamic> responders;
@@ -83,72 +85,6 @@ class _ResponderMapScreenState extends State<ResponderMapScreen> {
     setState(() {});
   }
 
-  Widget _buildCategoryList() {
-    final categories = {
-      'police_units': 'Police',
-      'fire_trucks': 'Fire Service',
-      'ambulances': 'Ambulance',
-    };
-
-    return Wrap(
-      spacing: 8,
-      children: categories.entries.map((entry) {
-        final key = entry.key;
-        final label = entry.value;
-        final count = widget.responders[key]?.length ?? 0;
-        if (count == 0) return const SizedBox.shrink();
-
-        return ChoiceChip(
-          label: Text("$label ($count)"),
-          selected: selectedCategory == key,
-          onSelected: (_) {
-            setState(() => selectedCategory = key);
-          },
-        );
-      }).toList(),
-    );
-  }
-
-  Widget _buildResponderDetails() {
-    if (selectedCategory == null || widget.responders[selectedCategory] == null) {
-      return const SizedBox.shrink();
-    }
-
-    final responders = widget.responders[selectedCategory] as List;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: responders.map<Widget>((responder) {
-        final name = responder['name'];
-        final travelTime = responder['travelTime'];
-        final etaMinutes = (travelTime / 60).ceil(); // convert seconds to minutes
-        return ListTile(
-          leading: const Icon(Icons.directions_run),
-          title: Text(name),
-          subtitle: Text("ETA: $etaMinutes min"),
-        );
-      }).toList(),
-    );
-  }
-
-  Widget _buildEmergencyDetails() {
-  final type = widget.emergencyDetails['emergency_type'] ?? 'N/A';
-  // final location = widget.emergencyDetails['emergency_location'] ?? 'Unknown location';
-  final description = widget.emergencyDetails['emergency_description'] ?? 'No description';
-
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      const Divider(),
-      const SizedBox(height: 10),
-      const Text("Emergency Details", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-      const SizedBox(height: 8),
-      Text("Type: $type"),
-      Text("Location: East Legon"),
-      Text("Description: $description"),
-    ],
-  );
-}
 
 
   @override
@@ -172,35 +108,14 @@ class _ResponderMapScreenState extends State<ResponderMapScreen> {
                   initialChildSize: 0.4,
                   minChildSize: 0.25,
                   maxChildSize: 0.9,
-                  builder: (context, scrollController) => Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-                      boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 5)],
-                    ),
-                    child: SingleChildScrollView(
-                      controller: scrollController,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Center(
-                            child: Text(
-                              "Emergency Responders",
-                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          _buildCategoryList(),
-                          const SizedBox(height: 16),
-                          _buildResponderDetails(),
-                          const SizedBox(height: 16),
-                          _buildEmergencyDetails(),
-                        ],
-                      ),
-                    ),
-                  ),
-                )
+                  builder: (context, scrollController) {
+                    return EmergencyRespondersBottomSheet(
+                      responders: widget.responders,
+                      emergencyDetails: widget.emergencyDetails,
+                      scrollController: scrollController,
+                    );
+                  },
+                ),
               ],
             ),
     );
