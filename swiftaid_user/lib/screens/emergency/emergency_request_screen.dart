@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import 'package:mime/mime.dart';
 import 'package:http_parser/http_parser.dart';
 import 'map_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class EmergencyRequestScreen extends StatefulWidget {
   final String emergencyType;
@@ -22,14 +23,23 @@ class _EmergencyRequestScreenState extends State<EmergencyRequestScreen> {
   final TextEditingController _descriptionController = TextEditingController();
   File? _image;
   bool _isLoading = false;
+  String? userToken;
   String userLocation = "Fetching location...";
   late String selectedType;
 
   @override
   void initState() {
     super.initState();
+    _loadUserToken();
     selectedType = widget.emergencyType;
     _loadLocation();
+  }
+
+  Future<void> _loadUserToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      userToken = prefs.getString('authToken');
+    });
   }
 
   Future<void> _pickImage() async {
@@ -107,16 +117,24 @@ class _EmergencyRequestScreenState extends State<EmergencyRequestScreen> {
       return;
     }
 
+    if (userToken == null) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("User not authenticated. Please log in again.")),
+    );
+    return;
+  }
+
     try {
       setState(() => _isLoading = true);
 
       final location = await _getLocation();
-      final uri = Uri.parse("http://10.0.2.2:8080/emergency/create");
+      final uri = Uri.parse("https://swift-aid-backend.onrender.com/emergency/create");
 
       final request = http.MultipartRequest('POST', uri)
         ..fields['user_description'] = _descriptionController.text
         ..fields['emergency_type'] = selectedType
-        ..fields['emergency_location'] = '[${location.latitude},${location.longitude}]';
+        ..fields['emergency_location'] = '[${location.latitude},${location.longitude}]'
+        ..headers['Authorization'] = 'Bearer $userToken'; // Add the Bearer token here
 
       final mimeType = lookupMimeType(_image!.path)!.split('/');
       request.files.add(await http.MultipartFile.fromPath(
@@ -129,26 +147,28 @@ class _EmergencyRequestScreenState extends State<EmergencyRequestScreen> {
       final response = await http.Response.fromStream(streamedResponse);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        
         var data = json.decode(response.body);
         final responders = data["response"]["responders"];
         final emergencyDetails = data["response"]["emergency_details"];
 
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => ResponderMapScreen(
-            responders: responders as Map<String, dynamic>,
-            emergencyDetails: emergencyDetails as Map<String, dynamic>
-          )),
+          MaterialPageRoute(
+            builder: (_) => ResponderMapScreen(
+              responders: responders as Map<String, dynamic>,
+              emergencyDetails: emergencyDetails as Map<String, dynamic>,
+            ),
+          ),
         );
 
       } else {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Failed to create request.")));
       }
+      
     } catch (e) {
       debugPrint("Error: ${e.toString()}");
-
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Something went wrong.")));
+
     } finally {
       setState(() => _isLoading = false);
     }

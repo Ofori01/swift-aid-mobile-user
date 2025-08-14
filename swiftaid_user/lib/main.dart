@@ -11,7 +11,7 @@ void main() {
   WidgetsFlutterBinding.ensureInitialized();
 
   socket = IO.io(
-    'http://10.0.2.2:8080',  // Change this if needed
+    'https://swift-aid-backend.onrender.com',  // Change this if needed
     IO.OptionBuilder()
       .setTransports(['websocket']) // Only websocket
       .disableAutoConnect()

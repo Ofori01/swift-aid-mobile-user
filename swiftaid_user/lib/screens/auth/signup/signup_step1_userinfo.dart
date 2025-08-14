@@ -27,7 +27,7 @@ class _SignupStep1UserInfoState extends State<SignupStep1UserInfo> {
       setState(() => _isLoading = true);
 
       try {
-        final res = await http.post(Uri.parse("http://10.0.2.2:8080/otp/send-otp"));
+        final res = await http.post(Uri.parse("https://swift-aid-backend.onrender.com/otp/send-otp"));
         final data = jsonDecode(res.body);
 
         if (res.statusCode == 200) {

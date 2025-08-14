@@ -31,7 +31,7 @@ class _SignupStep4TermsState extends State<SignupStep4Terms> {
     setState(() => isSubmitting = true);
 
     try {
-      final uri = Uri.parse("http://10.0.2.2:8080/user/signup"); // For emulator
+      final uri = Uri.parse("https://swift-aid-backend.onrender.com/user/signup"); // For emulator
       final request = http.MultipartRequest("POST", uri);
 
       request.fields['name'] = widget.signupData.fullName;

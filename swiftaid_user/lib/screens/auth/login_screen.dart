@@ -46,7 +46,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     try {
       final response = await http.post(
-        Uri.parse("http://10.0.2.2:8080/user/login"),
+        Uri.parse("https://swift-aid-backend.onrender.com/user/login"),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "phone_number": phone,

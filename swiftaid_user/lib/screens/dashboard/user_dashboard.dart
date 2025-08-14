@@ -76,12 +76,13 @@ class _UserDashboardState extends State<UserDashboard> {
   bool _isLoading = false;
   String userLocation = "Fetching location...";
   String? userName;
+  String? userToken;
 
 
   @override
   void initState() {
     super.initState();
-    _loadUserName();
+    _loadUserDetails();
     getUserLocation().then((location) {
       setState(() {
         userLocation = location;
@@ -90,12 +91,14 @@ class _UserDashboardState extends State<UserDashboard> {
     });
   }
 
-  Future<void> _loadUserName() async {
+  Future<void> _loadUserDetails() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
       userName = prefs.getString('userName') ?? 'User';
+      userToken = prefs.getString('authToken');
     });
   }
+  
   void _navigateToRequest(String type, BuildContext context) {
     Navigator.push(
       context,
@@ -150,19 +153,25 @@ class _UserDashboardState extends State<UserDashboard> {
     try {
       setState(() => _isLoading = true);
 
+      if (userToken == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("User token is missing. Please log in again.")),
+        );
+        return;
+      }
+
       final location = await _getLocation();
-      final uri = Uri.parse("http://10.0.2.2:8080/emergency/create");
+      final uri = Uri.parse("https://swift-aid-backend.onrender.com/emergency/create");
 
       final request = http.MultipartRequest('POST', uri)
         ..fields['user_description'] = "I need help urgently"
         ..fields['emergency_type'] = "Other"
-        ..fields['emergency_location'] = '[${location.latitude},${location.longitude}]';
+        ..fields['emergency_location'] = '[${location.latitude},${location.longitude}]'
+        ..headers['Authorization'] = 'Bearer $userToken';
 
       // Load image from assets as bytes
       ByteData byteData = await rootBundle.load('assets/icons/police_icon.jpeg');
       Uint8List imageBytes = byteData.buffer.asUint8List();
-
-      // print(imageBytes)
 
       // Detect MIME type
       final mimeType = lookupMimeType('police_icon.jpeg', headerBytes: imageBytes)!.split('/');
@@ -191,13 +200,15 @@ class _UserDashboardState extends State<UserDashboard> {
             emergencyDetails: emergencyDetails as Map<String, dynamic>
           )),
         );
+
       } else {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Failed to create request.")));
       }
+
     } catch (e) {
       debugPrint("Error: ${e.toString()}");
-
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Something went wrong.")));
+
     } finally {
       setState(() => _isLoading = false);
     }

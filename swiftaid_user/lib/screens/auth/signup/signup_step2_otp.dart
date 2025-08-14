@@ -53,7 +53,7 @@ class _SignupStep2OtpState extends State<SignupStep2Otp> {
     setState(() => _isLoading = true);
     try {
       final res = await http.post(
-        Uri.parse("http://10.0.2.2:8080/otp/send-otp"),
+        Uri.parse("https://swift-aid-backend.onrender.com/otp/send-otp"),
       );
       final data = jsonDecode(res.body);
       if (res.statusCode == 200) {
@@ -87,7 +87,7 @@ class _SignupStep2OtpState extends State<SignupStep2Otp> {
     setState(() => _isLoading = true);
     try {
       final res = await http.post(
-        Uri.parse("http://10.0.2.2:8080/otp/verify-otp"),
+        Uri.parse("https://swift-aid-backend.onrender.com/otp/verify-otp"),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({"code": code}),
       );
