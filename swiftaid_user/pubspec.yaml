@@ -31,6 +31,7 @@ dependencies:
   google_fonts: ^6.2.1
   socket_io_client: ^1.0.2
   intl_phone_field: ^3.2.0
+  mapbox_maps_flutter: ^2.0.0
 
 
 dev_dependencies:
@@ -53,3 +54,7 @@ flutter:
     - assets/icons/ambulance_icon.png
     - assets/lottie/ambulance.json
     - assets/lottie/policecar.json
+    - assets/icons/police.png
+    - assets/icons/fire.png
+    - assets/icons/ambulance.png
+    - assets/icons/location.png

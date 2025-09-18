@@ -58,8 +58,8 @@ class _EmergencyRespondersBottomSheetState extends State<EmergencyRespondersBott
             final coords = jsonDecode(loc) as List;
     
             if (coords.length == 2) {
-              final lat = coords[0] as double;
-              final lng = coords[1] as double;
+              final lng = coords[0] as double;
+              final lat = coords[1] as double;
 
               return getAddressFromCoordinates(lat, lng);
             }

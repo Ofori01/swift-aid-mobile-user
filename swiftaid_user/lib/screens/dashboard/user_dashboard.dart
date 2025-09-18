@@ -166,7 +166,7 @@ class _UserDashboardState extends State<UserDashboard> {
       final request = http.MultipartRequest('POST', uri)
         ..fields['user_description'] = "I need help urgently"
         ..fields['emergency_type'] = "Other"
-        ..fields['emergency_location'] = '[${location.latitude},${location.longitude}]'
+        ..fields['emergency_location'] = '[${location.longitude},${location.latitude}]'
         ..headers['Authorization'] = 'Bearer $userToken';
 
       // Load image from assets as bytes
@@ -188,6 +188,8 @@ class _UserDashboardState extends State<UserDashboard> {
       final response = await http.Response.fromStream(streamedResponse);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
+        print(location.latitude);
+        print(location.longitude);
 
         var data = json.decode(response.body);
         final responders = data["response"]["responders"];
