@@ -10,9 +10,9 @@ late IO.Socket socket;
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  
   String accessToken = const String.fromEnvironment("ACCESS_TOKEN");
   MapboxOptions.setAccessToken(accessToken);
-  print("Access Token: $accessToken");
 
   // socket = IO.io(
   //   'https://swift-aid-backend.onrender.com',  // Change this if needed

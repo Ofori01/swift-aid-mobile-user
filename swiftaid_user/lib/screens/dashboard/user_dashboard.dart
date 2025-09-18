@@ -188,8 +188,6 @@ class _UserDashboardState extends State<UserDashboard> {
       final response = await http.Response.fromStream(streamedResponse);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        print(location.latitude);
-        print(location.longitude);
 
         var data = json.decode(response.body);
         final responders = data["response"]["responders"];
