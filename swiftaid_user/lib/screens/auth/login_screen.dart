@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../auth/signup/signup_step1_userinfo.dart';
 import '../dashboard/main_tabs.dart'; 
+import '../../core/network/socket_service.dart';
 
 
 class LoginScreen extends StatefulWidget {
@@ -14,8 +15,9 @@ class LoginScreen extends StatefulWidget {
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
-Future<void> storeUserInfo(String name, String email, String phone, String token) async {
+Future<void> storeUserInfo(String id, String name, String email, String phone, String token) async {
   final prefs = await SharedPreferences.getInstance();
+  await prefs.setString('userId', id);
   await prefs.setString('userName', name);
   await prefs.setString('userEmail', email);
   await prefs.setString('userPhone', phone);
@@ -57,12 +59,24 @@ class _LoginScreenState extends State<LoginScreen> {
       final data = jsonDecode(response.body);
 
       if (response.statusCode == 200) {
-        storeUserInfo(
+        await storeUserInfo(
+          data['user']['user_id'],
           data['user']['name'],
           data['user']['email'],
           data['user']['phone_number'],
           data['token'],
         );
+        // print("start");
+
+        // 🔌 Connect to WebSocket
+        final socketService = SocketService();
+        socketService.connect(
+          token: data['token'],
+          userId: data['user']['user_id'],
+          baseUrl: 'https://swift-aid-backend.onrender.com',
+        );
+
+        // print("end");
 
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Login successful")),
@@ -72,8 +86,7 @@ class _LoginScreenState extends State<LoginScreen> {
           context,
           MaterialPageRoute(builder: (_) => const MainTabs()),
         );
-
-      } else {
+      }else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(data['message'] ?? "Login failed")),
         );

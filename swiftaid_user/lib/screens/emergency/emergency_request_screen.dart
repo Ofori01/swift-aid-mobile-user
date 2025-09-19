@@ -9,6 +9,7 @@ import 'package:mime/mime.dart';
 import 'package:http_parser/http_parser.dart';
 import 'map_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../core/network/socket_service.dart';
 
 class EmergencyRequestScreen extends StatefulWidget {
   final String emergencyType;
@@ -24,6 +25,7 @@ class _EmergencyRequestScreenState extends State<EmergencyRequestScreen> {
   File? _image;
   bool _isLoading = false;
   String? userToken;
+  String? userId;
   String userLocation = "Fetching location...";
   late String selectedType;
 
@@ -39,6 +41,7 @@ class _EmergencyRequestScreenState extends State<EmergencyRequestScreen> {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
       userToken = prefs.getString('authToken');
+      userId = prefs.getString('userId');
     });
   }
 
@@ -134,7 +137,7 @@ class _EmergencyRequestScreenState extends State<EmergencyRequestScreen> {
         ..fields['user_description'] = _descriptionController.text
         ..fields['emergency_type'] = selectedType
         ..fields['emergency_location'] = '[${location.longitude},${location.latitude}]'
-        ..headers['Authorization'] = 'Bearer $userToken'; // Add the Bearer token here
+        ..headers['Authorization'] = 'Bearer $userToken'; 
 
       final mimeType = lookupMimeType(_image!.path)!.split('/');
       request.files.add(await http.MultipartFile.fromPath(
@@ -147,10 +150,31 @@ class _EmergencyRequestScreenState extends State<EmergencyRequestScreen> {
       final response = await http.Response.fromStream(streamedResponse);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-       
+
         var data = json.decode(response.body);
         final responders = data["response"]["responders"];
         final emergencyDetails = data["response"]["emergency_details"];
+        final emergency_id =  data["response"]["emergency_id"] as String;
+
+        // final prefs = await SharedPreferences.getInstance();
+        // final userId = prefs.getString('userId');   
+        
+        final socket = SocketService().socket;
+
+        socket?.on('emergency-created', (payload) {
+          final emergencyId = payload['emergencyId'];
+          print('🚨 Emergency created: $emergencyId');
+
+          
+          // socket.emit('join-room', {
+          //   'roomId': emergencyId,
+          //   'userType': 'user',
+          //   'userId': userId,
+          // });
+
+          // Optional: remove this listener if you only need it once
+          socket.off('emergency-created');
+        });
 
         Navigator.push(
           context,
@@ -158,11 +182,11 @@ class _EmergencyRequestScreenState extends State<EmergencyRequestScreen> {
             builder: (_) => ResponderMapScreen(
               responders: responders as Map<String, dynamic>,
               emergencyDetails: emergencyDetails as Map<String, dynamic>,
+              emergencyId: emergency_id,
             ),
           ),
         );
-
-      } else {
+      }else {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Failed to create request.")));
       }
       

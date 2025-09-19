@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:swiftaid_user/core/network/socket_service.dart';
 import '../onboarding/onboarding_screens.dart';
 import './settings_screen.dart'; 
 import './main_tabs.dart'; 
@@ -34,6 +35,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> logout(BuildContext context) async {
+    SocketService().disconnect();
+
     final prefs = await SharedPreferences.getInstance();
     await prefs.clear();
 

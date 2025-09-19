@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../../core/network/socket_service.dart';
 import '../emergency/map_screen.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
@@ -77,6 +78,7 @@ class _UserDashboardState extends State<UserDashboard> {
   String userLocation = "Fetching location...";
   String? userName;
   String? userToken;
+  String? userId;
 
 
   @override
@@ -96,6 +98,7 @@ class _UserDashboardState extends State<UserDashboard> {
     setState(() {
       userName = prefs.getString('userName') ?? 'User';
       userToken = prefs.getString('authToken');
+      userId = prefs.getString('userId');
     });
   }
   
@@ -192,12 +195,32 @@ class _UserDashboardState extends State<UserDashboard> {
         var data = json.decode(response.body);
         final responders = data["response"]["responders"];
         final emergencyDetails = data["response"]["emergency_details"];
+        final emergency_id = data["response"]["emergency_id"];
+
+        final socket = SocketService().socket;
+
+        socket?.on('emergency-created', (payload) {
+
+          final emergencyId = payload['emergencyId'];
+          print('🚨 Emergency created: $emergencyId');
+
+          
+          socket.emit('join-room', {
+            'roomId': emergencyId,
+            'userType': 'user',
+            'userId': userId,
+          });
+
+          // Optional: remove this listener if you only need it once
+          socket.off('emergency-created');
+        });
 
         Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => ResponderMapScreen(
             responders: responders as Map<String, dynamic>,
-            emergencyDetails: emergencyDetails as Map<String, dynamic>
+            emergencyDetails: emergencyDetails as Map<String, dynamic>,
+            emergencyId: emergency_id,
           )),
         );
 

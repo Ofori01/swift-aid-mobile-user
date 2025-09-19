@@ -6,17 +6,22 @@ import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart'
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' as mbx
     show Position, Point, CameraOptions, MapAnimationOptions;
 import 'package:geolocator/geolocator.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../widgets/emergency_responders_bottom_sheet.dart';
 import 'package:flutter/services.dart' show Uint8List, rootBundle;
+import '../../core/network/socket_service.dart'; // adjust path
+
 
 class ResponderMapScreen extends StatefulWidget {
   final Map<String, dynamic> responders;
   final Map<String, dynamic> emergencyDetails;
+  final String emergencyId;
 
   const ResponderMapScreen({
     super.key,
     required this.responders,
     required this.emergencyDetails,
+    required this.emergencyId,
   });
 
   @override
@@ -26,16 +31,113 @@ class ResponderMapScreen extends StatefulWidget {
 class _ResponderMapScreenState extends State<ResponderMapScreen> {
   MapboxMap? _mapboxMap;
   PointAnnotationManager? _annotationManager;
-  Position? _geoPosition; // geolocator Position
+  Position? _geoPosition;
+  final socket = SocketService().socket;
+
+  final Map<String, PointAnnotation> _responderMarkers = {};
 
   @override
   void initState() {
     super.initState();
-    _determinePosition();
+    _initSocketAndLocation();
   }
 
+  Future<void> _initSocketAndLocation() async {
+    await _determinePosition();
+
+    final prefs = await SharedPreferences.getInstance();
+    final userId = prefs.getString('userId');
+
+    socket?.emit('join-room', {
+      'roomId': widget.emergencyId,
+      'userType': 'user',
+      'userId': userId,
+    });
+
+    _listenForSocketUpdates();
+  }
+
+  void _listenForSocketUpdates() {
+    socket?.on('responder-location-update', (data) async {
+      final responderId = data['responderId'];
+      final lat = (data['location']['latitude'] as num).toDouble();
+      final lng = (data['location']['longitude'] as num).toDouble();
+      await _updateResponderMarker(responderId, lng, lat);
+    });
+
+    socket?.on('eta-update', (data) {
+      final responderId = data['responderId'];
+      final eta = data['eta'];
+      final distance = data['distance'];
+      debugPrint('ETA update: $responderId -> $eta min ($distance m)');
+      // Update UI/bottom sheet if needed
+    });
+  }
+
+  Future<void> _updateResponderMarker(String id, double lng, double lat) async {
+    if (_annotationManager == null) return;
+
+    // 🔍 find the responder’s role from the original responders map
+    final role = _findRoleById(id);
+
+    // pick icon based on role
+    String assetPath;
+    switch (role) {
+      case 'police':
+        assetPath = 'assets/icons/police.png';
+        break;
+      case 'fire':
+        assetPath = 'assets/icons/fire.png';
+        break;
+      case 'ambulance':
+        assetPath = 'assets/icons/ambulance.png';
+        break;
+      default:
+        assetPath = 'assets/icons/location.png';
+    }
+
+    // remove old marker if it exists
+    if (_responderMarkers.containsKey(id)) {
+      await _annotationManager!.delete(_responderMarkers[id]!);
+    }
+
+    // create a new marker
+    final imageBytes = await _loadIcon(assetPath);
+    final newMarker = await _annotationManager!.create(
+      PointAnnotationOptions(
+        geometry: mbx.Point(coordinates: mbx.Position(lng, lat)),
+        image: imageBytes,
+        iconSize: 2.0,
+      ),
+    );
+    _responderMarkers[id] = newMarker;
+  }
+
+
+  String _findRoleById(String responderId) {
+    final responders = widget.responders;
+
+    // Accept dynamic and cast inside
+    bool match(dynamic r) {
+      final map = r as Map<String, dynamic>;
+      return map['_id'] == responderId || map['id'] == responderId;
+    }
+
+    if ((responders['police_units'] as List?)?.any(match) ?? false) {
+      return 'police';
+    }
+    if ((responders['fire_trucks'] as List?)?.any(match) ?? false) {
+      return 'fire';
+    }
+    if ((responders['ambulances'] as List?)?.any(match) ?? false) {
+      return 'ambulance';
+    }
+    return 'default'; // fallback if not found
+  }
+
+
+
   Future<void> _determinePosition() async {
-    // request location permission if needed
     var perm = await Geolocator.checkPermission();
     if (perm == LocationPermission.denied) {
       perm = await Geolocator.requestPermission();
@@ -45,7 +147,6 @@ class _ResponderMapScreenState extends State<ResponderMapScreen> {
     final pos = await Geolocator.getCurrentPosition();
     setState(() => _geoPosition = pos);
 
-    // once we have a position and the map/manager exist, add markers
     if (_annotationManager != null) {
       await _addUserMarker();
       await _addResponderMarkers();
@@ -68,19 +169,17 @@ class _ResponderMapScreenState extends State<ResponderMapScreen> {
   }
 
   Future<void> _createMarker(double lng, double lat, String id,
-    {Uint8List? imageData, double iconSize = 1.5}) async {
-      if (_annotationManager == null) return;
+      {Uint8List? imageData, double iconSize = 2.0}) async {
+    if (_annotationManager == null) return;
 
-      final options = PointAnnotationOptions(
-        geometry: mbx.Point(coordinates: mbx.Position(lng, lat)),
-        iconSize: iconSize,
-        // if imageData is supplied we use it, else fallback to default sprite
-        image: imageData,
-        iconImage: imageData == null ? 'default_marker' : null,
-      );
-
-      await _annotationManager!.create(options);
-    }
+    final options = PointAnnotationOptions(
+      geometry: mbx.Point(coordinates: mbx.Position(lng, lat)),
+      iconSize: iconSize,
+      image: imageData,
+      iconImage: imageData == null ? 'default_marker' : null,
+    );
+    await _annotationManager!.create(options);
+  }
 
   Future<void> _addUserMarker() async {
     if (_geoPosition == null) return;
@@ -91,7 +190,6 @@ class _ResponderMapScreenState extends State<ResponderMapScreen> {
       imageData: await _loadIcon('assets/icons/location.png'),
       iconSize: 1.5,
     );
-
   }
 
   Future<Uint8List> _loadIcon(String assetPath) async {
@@ -102,23 +200,23 @@ class _ResponderMapScreenState extends State<ResponderMapScreen> {
   Future<void> _addResponderMarkers() async {
     final responders = widget.responders;
 
-    Future<void> addMarkersForAgency(String key, String assetPath) async {
+    Future<void> addMarkers(String key, String assetPath) async {
       final list = responders[key];
       if (list is List) {
         final imageBytes = await _loadIcon(assetPath);
         for (var responder in list) {
           final coords = responder['current_location']['coordinates'];
-          final lng = coords[0] as double;
-          final lat = coords[1] as double;
+          final lng = (coords[0] as num).toDouble();
+          final lat = (coords[1] as num).toDouble();
           await _createMarker(lng, lat, responder['name'],
-              imageData: imageBytes, iconSize: 2.5);
+              imageData: imageBytes, iconSize: 1.0);
         }
       }
     }
 
-    await addMarkersForAgency('police_units', 'assets/icons/police.png');
-    await addMarkersForAgency('fire_trucks', 'assets/icons/fire.png');
-    await addMarkersForAgency('ambulances', 'assets/icons/ambulance.png');
+    await addMarkers('police_units', 'assets/icons/police.png');
+    await addMarkers('fire_trucks', 'assets/icons/fire.png');
+    await addMarkers('ambulances', 'assets/icons/ambulance.png');
   }
 
   @override
@@ -147,7 +245,6 @@ class _ResponderMapScreenState extends State<ResponderMapScreen> {
                     _mapboxMap = mapboxMap;
                     _annotationManager =
                         await mapboxMap.annotations.createPointAnnotationManager();
-                    // add markers now that manager exists
                     await _addUserMarker();
                     await _addResponderMarkers();
                   },
@@ -156,16 +253,23 @@ class _ResponderMapScreenState extends State<ResponderMapScreen> {
                   initialChildSize: 0.4,
                   minChildSize: 0.25,
                   maxChildSize: 0.9,
-                  builder: (context, scrollController) {
-                    return EmergencyRespondersBottomSheet(
-                      responders: widget.responders,
-                      emergencyDetails: widget.emergencyDetails,
-                      scrollController: scrollController,
-                    );
-                  },
+                  builder: (context, scrollController) =>
+                      EmergencyRespondersBottomSheet(
+                    responders: widget.responders,
+                    emergencyDetails: widget.emergencyDetails,
+                    scrollController: scrollController,
+                  ),
                 ),
               ],
             ),
     );
+  }
+
+  @override
+  void dispose() {
+    socket?.off('responder-location-update');
+    socket?.off('eta-update');
+    _annotationManager?.deleteAll();
+    super.dispose();
   }
 }
