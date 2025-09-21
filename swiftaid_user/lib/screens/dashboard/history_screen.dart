@@ -36,9 +36,7 @@ class _EmergencyHistoryScreenState extends State<EmergencyHistoryScreen> {
     }
 
     final jsonBody = json.decode(res.body);
-    final List data = jsonBody['data'];   
-    print("Final:");
-    print(jsonBody);            
+    final List data = jsonBody['data'];         
 
     final now = DateTime.now();
     final Map<String, List<Map<String, dynamic>>> grouped = {};
