@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math' show sin, cos, sqrt, atan2, pi;
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_map_marker_cluster/flutter_map_marker_cluster.dart';
@@ -7,18 +8,32 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:swiftaid_user/core/utils/location_helper.dart';
 import 'package:swiftaid_user/core/utils/overpass_service.dart';
 
-/// Simple POI model
+/// Simple POI model with distance & ETA helpers
 class POI {
   final String name;
   final latLng.LatLng location;
-  POI({required this.name, required this.location});
+  double distanceKm;
+  int etaMin;
+  POI({
+    required this.name,
+    required this.location,
+    this.distanceKm = 0,
+    this.etaMin = 0,
+  });
 
-  Map<String, dynamic> toJson() =>
-      {'name': name, 'lat': location.latitude, 'lng': location.longitude};
+  Map<String, dynamic> toJson() => {
+        'name': name,
+        'lat': location.latitude,
+        'lng': location.longitude,
+        'distanceKm': distanceKm,
+        'etaMin': etaMin,
+      };
 
   static POI fromJson(Map<String, dynamic> j) => POI(
         name: j['name'],
         location: latLng.LatLng(j['lat'], j['lng']),
+        distanceKm: (j['distanceKm'] ?? 0).toDouble(),
+        etaMin: (j['etaMin'] ?? 0).toInt(),
       );
 }
 
@@ -32,6 +47,7 @@ class ExploreScreen extends StatefulWidget {
 class _ExploreScreenState extends State<ExploreScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  final MapController _mapController = MapController();
   latLng.LatLng? _currentLatLng;
   List<Marker> _poiMarkers = [];
   List<POI> _pois = [];
@@ -39,16 +55,34 @@ class _ExploreScreenState extends State<ExploreScreen>
 
   final List<Map<String, String>> safetyTips = [
     {
-      'title': 'CPR Basics',
-      'desc': 'Push hard & fast in the chest center, 100–120/min.'
+      'title': 'CPR & First Aid',
+      'desc':
+          'Check responsiveness and breathing. Call 112 immediately. Push hard & fast in the chest center, 100–120 compressions per minute.'
     },
     {
       'title': 'Fire Safety',
-      'desc': 'Stop, drop & roll if clothes catch fire. Keep exits clear.'
+      'desc':
+          'Stop, drop & roll if clothes catch fire. Keep exits clear. Never use elevators during a fire.'
     },
     {
-      'title': 'Emergency Numbers',
-      'desc': 'Know 112 (National), 191 (Fire), 193 (Police) in Ghana.'
+      'title': 'Emergency Contacts',
+      'desc':
+          'Memorize key numbers in Ghana: 112 (National Emergency), 191 (Fire), 193 (Police). Save them on your phone.'
+    },
+    {
+      'title': 'Road Accident Safety',
+      'desc':
+          'Keep calm, move to a safe area if possible, avoid moving the injured, and wait for responders. Provide first aid if trained.'
+    },
+    {
+      'title': 'Flood Safety',
+      'desc':
+          'Avoid walking or driving through flood waters. Move to higher ground and stay informed via local alerts.'
+    },
+    {
+      'title': 'Fire Extinguisher Use',
+      'desc':
+          'Remember PASS: Pull the pin, Aim at base, Squeeze handle, Sweep side to side.'
     },
   ];
 
@@ -69,9 +103,8 @@ class _ExploreScreenState extends State<ExploreScreen>
       await _fetchPOIs(pos.latitude, pos.longitude);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Location/POI error: $e')),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Location/POI error: $e')));
       }
     }
   }
@@ -81,15 +114,16 @@ class _ExploreScreenState extends State<ExploreScreen>
     try {
       final poisRaw = await OverpassService.fetchPOIs(lat, lon, radius: 3000);
 
-      // convert to POI model list
       final poiList = poisRaw.map<POI>((p) {
         final name = (p['name'] ?? 'Unknown') as String;
         final plat = (p['lat'] as num).toDouble();
         final plon = (p['lon'] as num).toDouble();
-        return POI(name: name, location: latLng.LatLng(plat, plon));
+        final location = latLng.LatLng(plat, plon);
+        final dist = _distanceKm(lat, lon, plat, plon);
+        final eta = (dist / 40 * 60).round(); // assume 40 km/h travel
+        return POI(name: name, location: location, distanceKm: dist, etaMin: eta);
       }).toList();
 
-      // build markers
       final markers = poisRaw.map<Marker>((p) {
         final type = (p['type'] ?? 'unknown') as String;
         final iconData = _iconForType(type);
@@ -97,7 +131,6 @@ class _ExploreScreenState extends State<ExploreScreen>
         final plat = (p['lat'] as num).toDouble();
         final plon = (p['lon'] as num).toDouble();
         final name = (p['name'] ?? 'Unknown') as String;
-
         return Marker(
           point: latLng.LatLng(plat, plon),
           width: 44,
@@ -112,10 +145,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                   width: 6,
                   height: 6,
                   margin: const EdgeInsets.only(top: 2),
-                  decoration: BoxDecoration(
-                    color: color,
-                    shape: BoxShape.circle,
-                  ),
+                  decoration: BoxDecoration(color: color, shape: BoxShape.circle),
                 ),
               ],
             ),
@@ -123,7 +153,6 @@ class _ExploreScreenState extends State<ExploreScreen>
         );
       }).toList();
 
-      // update state & cache
       setState(() {
         _pois = poiList;
         _poiMarkers = markers;
@@ -131,14 +160,24 @@ class _ExploreScreenState extends State<ExploreScreen>
       await _cachePOIs(poiList);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to load POIs: $e')),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Failed to load POIs: $e')));
       }
       setState(() => _poiMarkers = []);
     } finally {
       setState(() => _loadingPois = false);
     }
+  }
+
+  double _distanceKm(double lat1, double lon1, double lat2, double lon2) {
+    const R = 6371; // Earth radius km
+    final dLat = (lat2 - lat1) * pi / 180;
+    final dLon = (lon2 - lon1) * pi / 180;
+    final a = sin(dLat / 2) * sin(dLat / 2) +
+        cos(lat1 * pi / 180) * cos(lat2 * pi / 180) *
+        sin(dLon / 2) * sin(dLon / 2);
+    final c = 2 * atan2(sqrt(a), sqrt(1 - a));
+    return R * c;
   }
 
   void _showPoiDialog(String name, String type) {
@@ -147,11 +186,7 @@ class _ExploreScreenState extends State<ExploreScreen>
       builder: (_) => AlertDialog(
         title: Text(name),
         content: Text('Type: $type'),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Close')),
-        ],
+        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close'))],
       ),
     );
   }
@@ -227,10 +262,7 @@ class _ExploreScreenState extends State<ExploreScreen>
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: Colors.white,
-          tabs: const [
-            Tab(text: 'Nearby Resources'),
-            Tab(text: 'Safety Tips'),
-          ],
+          tabs: const [Tab(text: 'Nearby Resources'), Tab(text: 'Safety Tips')],
         ),
       ),
       body: TabBarView(
@@ -253,8 +285,7 @@ class _ExploreScreenState extends State<ExploreScreen>
         point: _currentLatLng!,
         width: 48,
         height: 48,
-        child: const Icon(Icons.person_pin_circle,
-            color: Colors.red, size: 34),
+        child: const Icon(Icons.person_pin_circle, color: Colors.red, size: 34),
       ),
       ..._poiMarkers,
     ];
@@ -262,6 +293,7 @@ class _ExploreScreenState extends State<ExploreScreen>
     return Stack(
       children: [
         FlutterMap(
+          mapController: _mapController,
           options: MapOptions(
             initialCenter: _currentLatLng!,
             initialZoom: 14,
@@ -274,7 +306,7 @@ class _ExploreScreenState extends State<ExploreScreen>
             MarkerClusterLayerWidget(
               options: MarkerClusterLayerOptions(
                 maxClusterRadius: 45,
-                size: const Size(40,40),
+                size: const Size(40, 40),
                 markers: markers,
                 builder: (context, cluster) => CircleAvatar(
                   backgroundColor: Colors.red,
@@ -284,64 +316,128 @@ class _ExploreScreenState extends State<ExploreScreen>
             ),
           ],
         ),
-        Positioned(
-          bottom: 20,
-          left: 16,
-          right: 16,
-          child: Card(
-            color: isDark ? Colors.grey[900] : Colors.white,
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16)),
-            child: ListTile(
-              leading: Icon(Icons.place, color: red),
-              title: const Text('Nearby Hospitals & Stations'),
-              subtitle: Text(_loadingPois
-                  ? 'Loading nearby places...'
-                  : 'Showing live/cached POIs'),
-            ),
-          ),
+        DraggableScrollableSheet(
+          initialChildSize: 0.25,
+          minChildSize: 0.1,
+          maxChildSize: 0.7,
+          builder: (context, scrollController) {
+            return Material(
+              color: isDark ? Colors.grey[900] : Colors.white,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+              elevation: 8,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,   // ✅ prevents overflow
+                children: [
+                  const SizedBox(height: 8),
+                  Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[400],
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  ListTile(
+                    leading: Icon(Icons.place, color: red),
+                    title: const Text('Nearby Hospitals & Stations'),
+                    subtitle: Text(
+                      _loadingPois ? 'Loading nearby places...' : 'Tap an item to focus',
+                    ),
+                  ),
+                  const Divider(height: 1),
+                  // ✅ Expanded ensures the list uses only remaining space
+                  Expanded(
+                    child: ListView.builder(
+                      controller: scrollController,
+                      itemCount: _pois.length,
+                      itemBuilder: (context, i) {
+                        final poi = _pois[i];
+                        return ListTile(
+                          leading: const Icon(Icons.place, color: Colors.teal),
+                          title: Text(poi.name),
+                          subtitle: Text(
+                            '${poi.distanceKm.toStringAsFixed(2)} km • ETA ${poi.etaMin} min',
+                          ),
+                          onTap: () {
+                            _mapController.move(poi.location, 16);
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
         ),
       ],
     );
   }
 
   Widget _buildTipsTab(Color red, bool isDark) {
-    return PageView.builder(
-      itemCount: safetyTips.length,
-      controller: PageController(viewportFraction: 0.9),
-      itemBuilder: (context, index) {
-        final tip = safetyTips[index];
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 8),
-          child: Card(
-            color: isDark ? Colors.grey[850] : Colors.white,
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20)),
-            elevation: 4,
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.lightbulb, size: 60, color: red),
-                  const SizedBox(height: 20),
-                  Text(
-                    tip['title']!,
-                    style: const TextStyle(
-                        fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    tip['desc']!,
-                    style: const TextStyle(fontSize: 16),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      child: PageView.builder(
+        itemCount: safetyTips.length,
+        controller: PageController(viewportFraction: 0.85),
+        itemBuilder: (context, index) {
+          final tip = safetyTips[index];
+
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Card(
+              color: isDark ? Colors.grey[850] : Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              elevation: 5,
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // Icon header
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: red.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(Icons.lightbulb, size: 50, color: red),
+                    ),
+                    const SizedBox(height: 20),
+                    // Title
+                    Text(
+                      tip['title']!,
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : Colors.black87,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 12),
+                    // Description
+                    Flexible(
+                      child: SingleChildScrollView(
+                        child: Text(
+                          tip['desc']!,
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: isDark ? Colors.grey[300] : Colors.black54,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 }

@@ -226,8 +226,10 @@ class _EmergencyRespondersBottomSheetState extends State<EmergencyRespondersBott
               icon: const Icon(Icons.arrow_back),
               onPressed: () => setState(() => selectedCategory = null),
             ),
-            Text(selectedCategory![0].toUpperCase() + selectedCategory!.substring(1),
-                style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold)),
+            Text(
+              selectedCategory![0].toUpperCase() + selectedCategory!.substring(1),
+              style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
             const Spacer(),
             IconButton(
               icon: const Icon(Icons.close),
@@ -242,9 +244,8 @@ class _EmergencyRespondersBottomSheetState extends State<EmergencyRespondersBott
         ),
         const SizedBox(height: 8),
 
-        // Constrain list height using SizedBox
-        SizedBox(
-          height: MediaQuery.of(context).size.height * 0.4,
+        // ✅ Constrain the ListView using Expanded
+        Expanded(
           child: ListView.builder(
             controller: widget.scrollController,
             itemCount: responders.length,
@@ -255,13 +256,10 @@ class _EmergencyRespondersBottomSheetState extends State<EmergencyRespondersBott
               final etaMinutes = (travelTime / 60).ceil();
 
               return ListTile(
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 leading: const Icon(Icons.directions_run),
-                title: Text(name,
-                    style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
-                subtitle: Text("ETA: $etaMinutes min",
-                    style: GoogleFonts.poppins(fontSize: 13)),
+                title: Text(name, style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+                subtitle: Text("ETA: $etaMinutes min", style: GoogleFonts.poppins(fontSize: 13)),
               );
             },
           ),
