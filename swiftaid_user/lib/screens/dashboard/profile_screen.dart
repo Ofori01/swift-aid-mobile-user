@@ -3,7 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:swiftaid_user/core/network/socket_service.dart';
 import '../onboarding/onboarding_screens.dart';
 import './settings_screen.dart'; 
-import './main_tabs.dart'; 
+// import './main_tabs.dart'; 
 import './privacyPolicy_screen.dart'; 
 import './profileDetails_screen.dart'; 
 
@@ -63,13 +63,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 children: [
                   Row(
                     children: [
-                      IconButton(
-                        icon: const Icon(Icons.arrow_back),
-                        onPressed: () => Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(builder: (_) => const MainTabs()),
-                        ),
-                      ),
+                      // IconButton(
+                      //   icon: const Icon(Icons.arrow_back),
+                      //   onPressed: () => Navigator.pushReplacement(
+                      //     context,
+                      //     MaterialPageRoute(builder: (_) => const MainTabs()),
+                      //   ),
+                      // ),
                       const SizedBox(width: 10),
                       const Text(
                         "My Profile",
@@ -148,7 +148,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _buildMenuItem({required IconData icon, required String title, required VoidCallback onTap}) {
     return ListTile(
-      leading: Icon(icon),
+      leading: Icon(icon, color: const Color(0xFFB71C1C)),
       title: Text(title),
       trailing: const Icon(Icons.arrow_forward_ios, size: 16),
       onTap: onTap,

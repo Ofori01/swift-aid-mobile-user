@@ -107,7 +107,7 @@ class _ResponderMapScreenState extends State<ResponderMapScreen> {
       PointAnnotationOptions(
         geometry: mbx.Point(coordinates: mbx.Position(lng, lat)),
         image: imageBytes,
-        iconSize: 2.0,
+        iconSize: 4.5,
       ),
     );
     _responderMarkers[id] = newMarker;
@@ -169,7 +169,7 @@ class _ResponderMapScreenState extends State<ResponderMapScreen> {
   }
 
   Future<void> _createMarker(double lng, double lat, String id,
-      {Uint8List? imageData, double iconSize = 2.0}) async {
+      {Uint8List? imageData, double iconSize = 4.5}) async {
     if (_annotationManager == null) return;
 
     final options = PointAnnotationOptions(
@@ -188,7 +188,7 @@ class _ResponderMapScreenState extends State<ResponderMapScreen> {
       _geoPosition!.latitude,
       'user_location',
       imageData: await _loadIcon('assets/icons/location.png'),
-      iconSize: 1.5,
+      iconSize: 0.5,
     );
   }
 
@@ -209,7 +209,7 @@ class _ResponderMapScreenState extends State<ResponderMapScreen> {
           final lng = (coords[0] as num).toDouble();
           final lat = (coords[1] as num).toDouble();
           await _createMarker(lng, lat, responder['name'],
-              imageData: imageBytes, iconSize: 1.0);
+            imageData: imageBytes, iconSize: 1.5);
         }
       }
     }

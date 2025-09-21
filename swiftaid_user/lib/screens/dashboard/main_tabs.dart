@@ -16,7 +16,7 @@ class _MainTabsState extends State<MainTabs> {
 
   final List<Widget> _screens = [
     const UserDashboard(),
-    const HistoryScreen(),
+    const EmergencyHistoryScreen(),
     const ExploreScreen(),
     const ProfileScreen(),
   ];

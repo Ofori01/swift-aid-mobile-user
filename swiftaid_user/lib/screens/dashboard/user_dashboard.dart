@@ -5,13 +5,14 @@ import 'package:flutter/services.dart';
 import '../../core/network/socket_service.dart';
 import '../emergency/map_screen.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:geocoding/geocoding.dart';
+
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:lottie/lottie.dart';
 import 'package:mime/mime.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../emergency/emergency_request_screen.dart';
+import 'package:swiftaid_user/core/location_helper.dart'; 
 
 class UserDashboard extends StatefulWidget {
   const UserDashboard({super.key});
@@ -112,44 +113,13 @@ class _UserDashboardState extends State<UserDashboard> {
   }
 
   Future<String> getUserLocation() async {
-    bool serviceEnabled;
-    LocationPermission permission;
-
-    serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      return 'Location services are disabled.';
-    }
-
-    permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
-        return 'Location permissions are denied.';
-      }
-    }
-
-    if (permission == LocationPermission.deniedForever) {
-      return 'Location permissions are permanently denied.';
-    }
-
-    Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
-    List<Placemark> placemarks = await placemarkFromCoordinates(position.latitude, position.longitude);
-    Placemark place = placemarks[0];
-
-    return "${place.street}, ${place.locality}";
+    final loc = await LocationHelper.getReadableLocation(); // 👈 use the helper
+    return loc;
   }
 
   Future<Position> _getLocation() async {
-    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) throw Exception("Location services are disabled.");
-
-    LocationPermission permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.deniedForever) throw Exception("Location permission denied forever.");
-    }
-
-    return await Geolocator.getCurrentPosition();
+    final loc = await LocationHelper.getRawPosition();
+    return loc;
   }
 
   Future<void> _submitEmergency() async {
@@ -251,7 +221,8 @@ class _UserDashboardState extends State<UserDashboard> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12),
               decoration: BoxDecoration(
-                color: theme.scaffoldBackgroundColor,
+                // color: theme.scaffoldBackgroundColor,
+                color: theme.brightness == Brightness.dark ? Colors.grey[900] : Colors.grey[200],
                 boxShadow: [
                   BoxShadow(
                     color: isDark ? Colors.white12 : Colors.black12,
@@ -297,42 +268,42 @@ class _UserDashboardState extends State<UserDashboard> {
                             
                             // Emergency Header
                             // Welcome + Emergency Header
-Column(
-  crossAxisAlignment: CrossAxisAlignment.start,
-  children: [
-    Text(
-      'Welcome, ${userName ?? 'User'} 👋',
-      style: const TextStyle(
-        fontSize: 18,
-        fontWeight: FontWeight.w600,
-      ),
-    ),
-    const SizedBox(height: 12),
-    Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: const [
-              Text(
-                'Are you in an emergency?',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 8),
-              Text(
-                'Press the SOS button, your live location will be shared with the nearest help centre.',
-                style: TextStyle(fontSize: 16, color: Colors.grey),
-              ),
-            ],
-          ),
-        ),
-        SizedBox(width: 10),
-        Lottie.asset('assets/lottie/dashboard1.json', width: 105),
-      ],
-    ),
-  ],
-),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Welcome, ${userName ?? 'User'} 👋',
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: const [
+                                          Text(
+                                            'Are you in an emergency?',
+                                            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                                          ),
+                                          SizedBox(height: 8),
+                                          Text(
+                                            'Press the SOS button, your live location will be shared with the nearest help centre.',
+                                            style: TextStyle(fontSize: 16, color: Colors.grey),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    SizedBox(width: 10),
+                                    Lottie.asset('assets/lottie/dashboard1.json', width: 105),
+                                  ],
+                                ),
+                              ],
+                            ),
 
 
                             const SizedBox(height: 30),
