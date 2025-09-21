@@ -12,7 +12,7 @@ import 'package:lottie/lottie.dart';
 import 'package:mime/mime.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../emergency/emergency_request_screen.dart';
-import 'package:swiftaid_user/core/location_helper.dart'; 
+import 'package:swiftaid_user/core/utils/location_helper.dart'; 
 
 class UserDashboard extends StatefulWidget {
   const UserDashboard({super.key});

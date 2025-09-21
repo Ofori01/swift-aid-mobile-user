@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../core/utils.dart';
+import '../core/utils/utils.dart';
 
 class EmergencyRespondersBottomSheet extends StatefulWidget {
   final Map<String, dynamic> responders;

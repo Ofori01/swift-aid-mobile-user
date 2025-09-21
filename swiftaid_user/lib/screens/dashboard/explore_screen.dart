@@ -4,8 +4,8 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_map_marker_cluster/flutter_map_marker_cluster.dart';
 import 'package:latlong2/latlong.dart' as latLng;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:swiftaid_user/core/location_helper.dart';
-import 'package:swiftaid_user/core/overpass_service.dart';
+import 'package:swiftaid_user/core/utils/location_helper.dart';
+import 'package:swiftaid_user/core/utils/overpass_service.dart';
 
 /// Simple POI model
 class POI {
