@@ -47,7 +47,7 @@ class SocketService {
   IO.Socket? get socket => _socket;
 
   void disconnect() {
-    print('✅ Socket connected');
+    print('Socket disconnected after logout');
     _socket?.clearListeners();         // remove listeners
     _socket?.disconnect(); // stop the connection
     _socket?.close();      // fully close

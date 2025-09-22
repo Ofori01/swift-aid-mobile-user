@@ -52,6 +52,7 @@ flutter:
     - assets/lottie/onboarding2.json
     - assets/lottie/dashboard1.json
     - assets/lottie/sos_button.json
+    - assets/lottie/fireman.json
     - assets/icons/police_icon.jpeg
     - assets/icons/fire_icon.jpeg
     - assets/icons/ambulance_icon.png

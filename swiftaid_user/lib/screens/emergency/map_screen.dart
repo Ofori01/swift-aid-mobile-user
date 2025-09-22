@@ -59,14 +59,14 @@ class _ResponderMapScreenState extends State<ResponderMapScreen> {
 
   void _listenForSocketUpdates() {
     socket?.on('responder-location-update', (data) async {
-      final responderId = data['responderId'];
+      final responderId = data['responder_id'];
       final lat = (data['location']['latitude'] as num).toDouble();
       final lng = (data['location']['longitude'] as num).toDouble();
       await _updateResponderMarker(responderId, lng, lat);
     });
 
     socket?.on('eta-update', (data) {
-      final responderId = data['responderId'];
+      final responderId = data['responder_id'];
       final eta = data['eta'];
       final distance = data['distance'];
       debugPrint('ETA update: $responderId -> $eta min ($distance m)');
@@ -107,7 +107,7 @@ class _ResponderMapScreenState extends State<ResponderMapScreen> {
       PointAnnotationOptions(
         geometry: mbx.Point(coordinates: mbx.Position(lng, lat)),
         image: imageBytes,
-        iconSize: 4.5,
+        iconSize: 0.8,
       ),
     );
     _responderMarkers[id] = newMarker;
@@ -120,7 +120,7 @@ class _ResponderMapScreenState extends State<ResponderMapScreen> {
     // Accept dynamic and cast inside
     bool match(dynamic r) {
       final map = r as Map<String, dynamic>;
-      return map['_id'] == responderId || map['id'] == responderId;
+      return map['responder_id'] == responderId || map['id'] == responderId;
     }
 
     if ((responders['police_units'] as List?)?.any(match) ?? false) {
@@ -169,7 +169,7 @@ class _ResponderMapScreenState extends State<ResponderMapScreen> {
   }
 
   Future<void> _createMarker(double lng, double lat, String id,
-      {Uint8List? imageData, double iconSize = 4.5}) async {
+      {Uint8List? imageData, double iconSize = 0.8}) async {
     if (_annotationManager == null) return;
 
     final options = PointAnnotationOptions(
@@ -188,7 +188,7 @@ class _ResponderMapScreenState extends State<ResponderMapScreen> {
       _geoPosition!.latitude,
       'user_location',
       imageData: await _loadIcon('assets/icons/location.png'),
-      iconSize: 0.5,
+      iconSize: 0.7,
     );
   }
 
@@ -209,7 +209,7 @@ class _ResponderMapScreenState extends State<ResponderMapScreen> {
           final lng = (coords[0] as num).toDouble();
           final lat = (coords[1] as num).toDouble();
           await _createMarker(lng, lat, responder['name'],
-            imageData: imageBytes, iconSize: 1.5);
+            imageData: imageBytes, iconSize: 0.8);
         }
       }
     }
@@ -221,6 +221,17 @@ class _ResponderMapScreenState extends State<ResponderMapScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // return WillPopScope(
+    // onWillPop: () async {
+    //   // show a message instead of leaving the screen
+    //   ScaffoldMessenger.of(context).showSnackBar(
+    //     const SnackBar(
+    //       content: Text('You cannot leave while an emergency is active.'),
+    //     ),
+    //   );
+    //   return false; // prevent pop
+    // },
+    // child:  Scaffold(
     return Scaffold(
       body: _geoPosition == null
           ? const Center(child: CircularProgressIndicator())

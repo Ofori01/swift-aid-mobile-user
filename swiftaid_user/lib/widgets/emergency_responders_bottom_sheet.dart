@@ -85,8 +85,8 @@ class _EmergencyRespondersBottomSheetState extends State<EmergencyRespondersBott
                 mainAxisAlignment: MainAxisAlignment.center, // Center horizontally
                 children: [
                   Icon(  // Emergency icon
-                    Icons.emergency,
-                    color: Colors.red,
+                    Icons.warning_amber_rounded,
+                    color: Colors.amber,
                     size: 24,
                   ),
                   SizedBox(width: 8), // Spacing between icon and text
@@ -191,7 +191,7 @@ class _EmergencyRespondersBottomSheetState extends State<EmergencyRespondersBott
                       ),
                       child: Row(
                         children: [
-                          Icon(icon, size: 28),
+                          Icon(icon.icon, color: icon.color, size: 28),
                           const SizedBox(width: 12),
                           Text(
                             cat[0].toUpperCase() + cat.substring(1),
@@ -268,16 +268,16 @@ class _EmergencyRespondersBottomSheetState extends State<EmergencyRespondersBott
     );
   }
 
-  IconData getCategoryIcon(String category) {
+  Icon getCategoryIcon(String category) {
     switch (category) {
       case 'ambulances':
-        return Icons.local_hospital;
+        return Icon(Icons.local_hospital, color: Colors.green);
       case 'fire_trucks':
-        return Icons.local_fire_department;
-      case 'police':
-        return Icons.local_police;
+        return Icon(Icons.local_fire_department, color: Colors.red);
+      case 'police_units':
+        return Icon(Icons.local_police, color: Colors.blue);
       default:
-        return Icons.car_rental;
+        return Icon(Icons.car_rental, color: Colors.grey);
     }
   }
 
@@ -286,7 +286,7 @@ class _EmergencyRespondersBottomSheetState extends State<EmergencyRespondersBott
       case 'ambulances':
         return 'assets/lottie/ambulance.json';
       case 'fire_trucks':
-        return 'assets/lottie/policecar.json';
+        return 'assets/lottie/fireman.json';
       case 'police':
         return 'assets/lottie/policecar.json';
       default:

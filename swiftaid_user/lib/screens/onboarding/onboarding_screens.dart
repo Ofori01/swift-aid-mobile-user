@@ -26,7 +26,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       "desc": "Track responders in real time and know when help will arrive.",
     },
     {
-      "animation": "assets/lottie/onboarding1.json",
+      "animation": "assets/lottie/ambulance.json",
       "title": "Ambulance Response",
       "desc": "Provide urgent medical support and save more lives during emergencies.",
     },

@@ -165,7 +165,7 @@ class _UserDashboardState extends State<UserDashboard> {
         var data = json.decode(response.body);
         final responders = data["response"]["responders"];
         final emergencyDetails = data["response"]["emergency_details"];
-        final emergency_id = data["response"]["emergency_id"];
+        final emergencyId = data["response"]["emergency_id"];
 
         final socket = SocketService().socket;
 
@@ -174,12 +174,16 @@ class _UserDashboardState extends State<UserDashboard> {
           final emergencyId = payload['emergencyId'];
           print('🚨 Emergency created: $emergencyId');
 
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(payload['message'])),
+          );
+
           
-          socket.emit('join-room', {
-            'roomId': emergencyId,
-            'userType': 'user',
-            'userId': userId,
-          });
+          // socket.emit('join-room', {
+          //   'roomId': emergencyId,
+          //   'userType': 'user',
+          //   'userId': userId,
+          // });
 
           // Optional: remove this listener if you only need it once
           socket.off('emergency-created');
@@ -190,7 +194,7 @@ class _UserDashboardState extends State<UserDashboard> {
           MaterialPageRoute(builder: (_) => ResponderMapScreen(
             responders: responders as Map<String, dynamic>,
             emergencyDetails: emergencyDetails as Map<String, dynamic>,
-            emergencyId: emergency_id,
+            emergencyId: emergencyId,
           )),
         );
 

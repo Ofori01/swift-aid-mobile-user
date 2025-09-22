@@ -154,10 +154,7 @@ class _EmergencyRequestScreenState extends State<EmergencyRequestScreen> {
         var data = json.decode(response.body);
         final responders = data["response"]["responders"];
         final emergencyDetails = data["response"]["emergency_details"];
-        final emergency_id =  data["response"]["emergency_id"] as String;
-
-        // final prefs = await SharedPreferences.getInstance();
-        // final userId = prefs.getString('userId');   
+        final emergencyId =  data["response"]["emergency_id"] as String; 
         
         final socket = SocketService().socket;
 
@@ -165,24 +162,22 @@ class _EmergencyRequestScreenState extends State<EmergencyRequestScreen> {
           final emergencyId = payload['emergencyId'];
           print('🚨 Emergency created: $emergencyId');
 
-          
-          // socket.emit('join-room', {
-          //   'roomId': emergencyId,
-          //   'userType': 'user',
-          //   'userId': userId,
-          // });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(payload['message'])),
+          );
 
           // Optional: remove this listener if you only need it once
           socket.off('emergency-created');
         });
 
+        
         Navigator.push(
           context,
           MaterialPageRoute(
             builder: (_) => ResponderMapScreen(
               responders: responders as Map<String, dynamic>,
               emergencyDetails: emergencyDetails as Map<String, dynamic>,
-              emergencyId: emergency_id,
+              emergencyId: emergencyId,
             ),
           ),
         );
