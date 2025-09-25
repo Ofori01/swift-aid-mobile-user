@@ -119,173 +119,153 @@ class _EmergencyRequestScreenState extends State<EmergencyRequestScreen> {
     return await Geolocator.getCurrentPosition();
   }
 
-  
 
-  // void _showWaitingDialog() {
-  //   showDialog(
-  //     context: context,
-  //     barrierDismissible: false,
-  //     builder: (_) => const AlertDialog(
-  //       content: Row(
-  //         children: [
-  //           CircularProgressIndicator(),
-  //           SizedBox(width: 16),
-  //           Expanded(child: Text("Connecting to emergency room…")),
-  //         ],
-  //       ),
-  //     ),
-  //   );
-  // }
-
-
-Future<void> _submitEmergency() async {
-  try {
-    // Immediately show loading overlay
-    setState(() => _isLoading = true);
-
-    if (_descriptionController.text.isEmpty || _image == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please provide all details.")),
-      );
-      return;
-    }
-
-    if (userToken == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("User not authenticated. Please log in again.")),
-      );
-      return;
-    }
-
-    final socket = SocketService().socket;
-    if (socket == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Socket not initialized.")),
-      );
-      return;
-    }
-
-    // Ensure socket is connected
+  Future<void> _submitEmergency() async {
     try {
-      if (!(socket.connected == true)) {
-        final connectCompleter = Completer<void>();
-        socket.once('connect', (_) => connectCompleter.complete());
-        socket.connect();
-        await connectCompleter.future.timeout(const Duration(seconds: 5));
-        if (!mounted) return;
-      }
-    } catch (_) {
-      // ignore connect timeout; we'll still try listening
-    }
+      // Immediately show loading overlay
+      setState(() => _isLoading = true);
 
-    // Prepare a completer to wait for the 'emergency-created' event
-    final completer = Completer<Map<String, dynamic>>();
-    socket.once('emergency-created', (payload) {
+      if (_descriptionController.text.isEmpty || _image == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Please provide all details.")),
+        );
+        return;
+      }
+
+      if (userToken == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("User not authenticated. Please log in again.")),
+        );
+        return;
+      }
+
+      final socket = SocketService().socket;
+      if (socket == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Socket not initialized.")),
+        );
+        return;
+      }
+
+      // Ensure socket is connected
       try {
-        Map<String, dynamic> parsed;
-        if (payload is String) {
-          parsed = jsonDecode(payload) as Map<String, dynamic>;
-        } else if (payload is Map) {
-          parsed = Map<String, dynamic>.from(payload);
-        } else {
-          parsed = {'raw': payload};
+        if (!(socket.connected == true)) {
+          final connectCompleter = Completer<void>();
+          socket.once('connect', (_) => connectCompleter.complete());
+          socket.connect();
+          await connectCompleter.future.timeout(const Duration(seconds: 5));
+          if (!mounted) return;
         }
-        if (!completer.isCompleted) completer.complete(parsed);
-      } catch (e) {
-        if (!completer.isCompleted) completer.completeError(e);
-      }
-    });
-
-    // -------- Send HTTP multipart request --------
-    final location = await _getLocation();
-    if (!mounted) return;
-
-    final uri = Uri.parse("https://swift-aid-backend.onrender.com/emergency/create");
-    final request = http.MultipartRequest('POST', uri)
-      ..fields['user_description'] = _descriptionController.text
-      ..fields['emergency_type'] = selectedType
-      ..fields['emergency_location'] = '[${location.longitude},${location.latitude}]'
-      ..headers['Authorization'] = 'Bearer $userToken';
-
-    final mimeType = lookupMimeType(_image!.path)!.split('/');
-    request.files.add(
-      await http.MultipartFile.fromPath(
-        'image',
-        _image!.path,
-        contentType: MediaType(mimeType[0], mimeType[1]),
-      ),
-    );
-
-    final streamedResponse = await request.send();
-    if (!mounted) return;
-    final response = await http.Response.fromStream(streamedResponse);
-    if (!mounted) return;
-
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      final data = json.decode(response.body);
-      final responders = data["response"]["responders"];
-      final emergencyDetails = data["response"]["emergency_details"];
-
-      // Wait for the socket confirmation (8-second timeout)
-      Map<String, dynamic> eventPayload;
-      try {
-        eventPayload = await completer.future.timeout(const Duration(seconds: 8));
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Timed out waiting for server confirmation. Try again.")),
-        );
-        return;
+      } catch (_) {
+        // ignore connect timeout; we'll still try listening
       }
 
-      final emergencyId = eventPayload['emergencyId'];
-      if (emergencyId == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Server confirmed creation but no ID received.")),
-        );
-        return;
-      }
-
-      // Join the emergency room
-      socket.emit('join-room', {
-        'roomId': emergencyId,
-        'userType': 'user',
-        'userId': userId,
+      // Prepare a completer to wait for the 'emergency-created' event
+      final completer = Completer<Map<String, dynamic>>();
+      socket.once('emergency-created', (payload) {
+        try {
+          Map<String, dynamic> parsed;
+          if (payload is String) {
+            parsed = jsonDecode(payload) as Map<String, dynamic>;
+          } else if (payload is Map) {
+            parsed = Map<String, dynamic>.from(payload);
+          } else {
+            parsed = {'raw': payload};
+          }
+          if (!completer.isCompleted) completer.complete(parsed);
+        } catch (e) {
+          if (!completer.isCompleted) completer.completeError(e);
+        }
       });
 
-      if (eventPayload['message'] != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(eventPayload['message'].toString())),
-        );
-      }
-
+      // -------- Send HTTP multipart request --------
+      final location = await _getLocation();
       if (!mounted) return;
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => ResponderMapScreen(
-            responders: responders as Map<String, dynamic>,
-            emergencyDetails: emergencyDetails as Map<String, dynamic>,
-            emergencyId: emergencyId,
-          ),
+
+      final uri = Uri.parse("https://swift-aid-backend.onrender.com/emergency/create");
+      final request = http.MultipartRequest('POST', uri)
+        ..fields['user_description'] = _descriptionController.text
+        ..fields['emergency_type'] = selectedType
+        ..fields['emergency_location'] = '[${location.longitude},${location.latitude}]'
+        ..headers['Authorization'] = 'Bearer $userToken';
+
+      final mimeType = lookupMimeType(_image!.path)!.split('/');
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'image',
+          _image!.path,
+          contentType: MediaType(mimeType[0], mimeType[1]),
         ),
       );
-    } else {
+
+      final streamedResponse = await request.send();
+      if (!mounted) return;
+      final response = await http.Response.fromStream(streamedResponse);
+      if (!mounted) return;
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = json.decode(response.body);
+        final responders = data["response"]["responders"];
+        final emergencyDetails = data["response"]["emergency_details"];
+
+        // Wait for the socket confirmation (8-second timeout)
+        Map<String, dynamic> eventPayload;
+        try {
+          eventPayload = await completer.future.timeout(const Duration(seconds: 8));
+        } catch (e) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Timed out waiting for server confirmation. Try again.")),
+          );
+          return;
+        }
+
+        final emergencyId = eventPayload['emergencyId'];
+        if (emergencyId == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Server confirmed creation but no ID received.")),
+          );
+          return;
+        }
+
+        // Join the emergency room
+        socket.emit('join-room', {
+          'roomId': emergencyId,
+          'userType': 'user',
+          'userId': userId,
+        });
+
+        if (eventPayload['message'] != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(eventPayload['message'].toString())),
+          );
+        }
+
+        if (!mounted) return;
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ResponderMapScreen(
+              responders: responders as Map<String, dynamic>,
+              emergencyDetails: emergencyDetails as Map<String, dynamic>,
+              emergencyId: emergencyId,
+            ),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Failed to create request.")),
+        );
+      }
+    } catch (e) {
+      debugPrint("Error: ${e.toString()}");
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Failed to create request.")),
+        const SnackBar(content: Text("Something went wrong.")),
       );
+    } finally {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
     }
-  } catch (e) {
-    debugPrint("Error: ${e.toString()}");
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Something went wrong.")),
-    );
-  } finally {
-    if (!mounted) return;
-    setState(() => _isLoading = false);
   }
-}
-
-
 
   Widget buildEmergencyChips() {
     final chips = [

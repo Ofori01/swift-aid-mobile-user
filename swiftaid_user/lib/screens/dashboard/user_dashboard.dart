@@ -114,7 +114,7 @@ class _UserDashboardState extends State<UserDashboard> {
   }
 
   Future<String> getUserLocation() async {
-    final loc = await LocationHelper.getReadableLocation(); // 👈 use the helper
+    final loc = await LocationHelper.getReadableLocation(); 
     return loc;
   }
 
@@ -122,96 +122,6 @@ class _UserDashboardState extends State<UserDashboard> {
     final loc = await LocationHelper.getRawPosition();
     return loc;
   }
-
-  // Future<void> _submitEmergency() async {
-  //   try {
-  //     setState(() => _isLoading = true);
-
-  //     if (userToken == null) {
-  //       ScaffoldMessenger.of(context).showSnackBar(
-  //         const SnackBar(content: Text("User token is missing. Please log in again.")),
-  //       );
-  //       return;
-  //     }
-
-  //     final location = await _getLocation();
-  //     final uri = Uri.parse("https://swift-aid-backend.onrender.com/emergency/create");
-
-  //     final request = http.MultipartRequest('POST', uri)
-  //       ..fields['user_description'] = "I need help urgently"
-  //       ..fields['emergency_type'] = "Other"
-  //       ..fields['emergency_location'] = '[${location.longitude},${location.latitude}]'
-  //       ..headers['Authorization'] = 'Bearer $userToken';
-
-  //     // Load image from assets as bytes
-  //     ByteData byteData = await rootBundle.load('assets/icons/police_icon.jpeg');
-  //     Uint8List imageBytes = byteData.buffer.asUint8List();
-
-  //     // Detect MIME type
-  //     final mimeType = lookupMimeType('police_icon.jpeg', headerBytes: imageBytes)!.split('/');
-
-  //     // Add image directly from memory
-  //     request.files.add(http.MultipartFile.fromBytes(
-  //       'image',
-  //       imageBytes,
-  //       filename: 'police_icon.jpeg',
-  //       contentType: MediaType(mimeType[0], mimeType[1]),
-  //     ));
-
-  //     final streamedResponse = await request.send();
-  //     final response = await http.Response.fromStream(streamedResponse);
-
-  //     if (response.statusCode == 200 || response.statusCode == 201) {
-
-  //       var data = json.decode(response.body);
-  //       final responders = data["response"]["responders"];
-  //       final emergencyDetails = data["response"]["emergency_details"];
-  //       final emergency_id = data["response"]["emergency_id"];
-  //       print("emergencyyyy");
-  //       print(emergency_id);
-
-  //       final socket = SocketService().socket;
-
-  //       socket?.on('emergency-created', (payload) {
-
-  //         final emergencyId = payload['emergencyId'];
-  //         print('🚨🚨 Emergency created: $emergencyId');
-          
-  //         socket.emit('join-room', {
-  //           'roomId': emergencyId,
-  //           'userType': 'user',
-  //           'userId': userId,
-  //         });
-
-  //         ScaffoldMessenger.of(context).showSnackBar(
-  //           SnackBar(content: Text(payload['message'])),
-  //         );
-  //         // Optional: remove this listener if you only need it once
-  //         socket.off('emergency-created');
-  //       });
-
-  //       Navigator.push(
-  //         context,
-  //         MaterialPageRoute(builder: (_) => ResponderMapScreen(
-  //           responders: responders as Map<String, dynamic>,
-  //           emergencyDetails: emergencyDetails as Map<String, dynamic>,
-  //           emergencyId: emergency_id,
-  //         )),
-  //       );
-
-  //     } else {
-  //       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Failed to create request.")));
-  //     }
-
-  //   } catch (e) {
-  //     debugPrint("Error: ${e.toString()}");
-  //     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Something went wrong.")));
-
-  //   } finally {
-  //     setState(() => _isLoading = false);
-  //   }
-  // }
-
 
   Future<void> _submitEmergency() async {
     try {
