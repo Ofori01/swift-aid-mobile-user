@@ -35,9 +35,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> logout(BuildContext context) async {
-    SocketService().disconnect();
-
     final prefs = await SharedPreferences.getInstance();
+    final userId = prefs.getString('userId');
+
+    // Leave personal room
+    SocketService().socket?.emit('leave-room', {
+      'roomId': userId,
+      'userType': 'user',
+      'userId': userId,
+    });
+
+    SocketService().disconnect();
     await prefs.clear();
 
     Navigator.pushAndRemoveUntil(

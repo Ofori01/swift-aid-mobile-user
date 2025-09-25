@@ -20,6 +20,7 @@ class _SignupStep3GhanaCardState extends State<SignupStep3GhanaCard> {
 
   File? frontImage;
   File? backImage;
+  bool get isDark => Theme.of(context).brightness == Brightness.dark;
 
   Future<void> _pickImage(bool isFront) async {
     final source = await showDialog<ImageSource>(
@@ -109,7 +110,7 @@ class _SignupStep3GhanaCardState extends State<SignupStep3GhanaCard> {
                 child: frontImage == null
                     ? Container(
                         height: 150,
-                        color: Colors.grey[300],
+                        color: isDark ? Colors.white70 : Colors.black54,
                         child: const Center(child: Text("Tap to upload front")),
                       )
                     : Image.file(frontImage!, height: 150),
@@ -123,7 +124,7 @@ class _SignupStep3GhanaCardState extends State<SignupStep3GhanaCard> {
                 child: backImage == null
                     ? Container(
                         height: 150,
-                        color: Colors.grey[300],
+                        color: isDark ? Colors.white70 : Colors.black54,
                         child: const Center(child: Text("Tap to upload back")),
                       )
                     : Image.file(backImage!, height: 150),

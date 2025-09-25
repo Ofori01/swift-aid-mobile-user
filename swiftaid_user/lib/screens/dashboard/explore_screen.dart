@@ -7,6 +7,8 @@ import 'package:latlong2/latlong.dart' as latLng;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:swiftaid_user/core/utils/location_helper.dart';
 import 'package:swiftaid_user/core/utils/overpass_service.dart';
+import 'safety_tip_detail.dart';
+
 
 /// Simple POI model with distance & ETA helpers
 class POI {
@@ -53,38 +55,94 @@ class _ExploreScreenState extends State<ExploreScreen>
   List<POI> _pois = [];
   bool _loadingPois = false;
 
-  final List<Map<String, String>> safetyTips = [
+  final List<Map<String, dynamic>> safetyTips = [
     {
       'title': 'CPR & First Aid',
       'desc':
-          'Check responsiveness and breathing. Call 112 immediately. Push hard & fast in the chest center, 100–120 compressions per minute.'
+          'Check responsiveness and breathing. Call 112 immediately. Push hard & fast in the chest center, 100–120 compressions per minute.',
+      'details': '''
+  1️⃣ Ensure the area is safe for both you and the victim.
+  2️⃣ Check responsiveness by tapping the shoulders and shouting.
+  3️⃣ Call 112 or ask someone nearby to call and put the phone on speaker.
+  4️⃣ If not breathing normally, begin chest compressions:
+    • Place the heel of one hand on the chest center.
+    • Push hard and fast at 100–120 compressions per minute, depth ~5 cm.
+  5️⃣ If trained, give 2 rescue breaths after every 30 compressions.
+  6️⃣ Continue until professional help arrives or the person shows signs of life.
+  ''',
+      'videoUrl': 'https://www.youtube.com/watch?v=cosVBV96E2g',
     },
     {
       'title': 'Fire Safety',
       'desc':
-          'Stop, drop & roll if clothes catch fire. Keep exits clear. Never use elevators during a fire.'
+          'Stop, drop & roll if clothes catch fire. Keep exits clear. Never use elevators during a fire.',
+      'details': '''
+  1️⃣ If clothes catch fire: Stop, Drop to the ground, and Roll to smother flames.
+  2️⃣ Crawl low under smoke to avoid inhaling toxic fumes.
+  3️⃣ Feel doors with the back of your hand before opening—if hot, find another exit.
+  4️⃣ Never use elevators; use stairs only.
+  5️⃣ Call 112 once safe and give your exact location.
+  ''',
+      'videoUrl': 'https://www.youtube.com/watch?v=J5jhhIdhU5Q',
     },
     {
       'title': 'Emergency Contacts',
       'desc':
-          'Memorize key numbers in Ghana: 112 (National Emergency), 191 (Fire), 193 (Police). Save them on your phone.'
+          'Memorize key numbers in Ghana: 112 (National Emergency), 191 (Fire), 193 (Police). Save them on your phone.',
+      'details': '''
+  1️⃣ Save these numbers in your phone and label them clearly:
+    • 112 – National Emergency (all services)
+    • 191 – Fire Service
+    • 193 – Police
+  2️⃣ Post them visibly at home and work.
+  3️⃣ Teach children how and when to call these numbers.
+  4️⃣ Always state your location clearly when calling.
+  ''',
+      'videoUrl': '', // optional
     },
     {
       'title': 'Road Accident Safety',
       'desc':
-          'Keep calm, move to a safe area if possible, avoid moving the injured, and wait for responders. Provide first aid if trained.'
+          'Keep calm, move to a safe area if possible, avoid moving the injured, and wait for responders. Provide first aid if trained.',
+      'details': '''
+  1️⃣ Park safely and turn on hazard lights.
+  2️⃣ Check for injuries; call 112 if anyone is hurt.
+  3️⃣ Do not move seriously injured victims unless there is immediate danger (e.g., fire).
+  4️⃣ If trained, provide first aid such as controlling bleeding or CPR.
+  5️⃣ Exchange contact and insurance details if appropriate, but stay at the scene until help arrives.
+  ''',
+      'videoUrl': 'https://www.youtube.com/watch?v=3oT-evcOaUM',
     },
     {
       'title': 'Flood Safety',
       'desc':
-          'Avoid walking or driving through flood waters. Move to higher ground and stay informed via local alerts.'
+          'Avoid walking or driving through flood waters. Move to higher ground and stay informed via local alerts.',
+      'details': '''
+  1️⃣ Move immediately to higher ground—never wait for evacuation orders.
+  2️⃣ Avoid walking or driving through moving water; just 15 cm of water can knock you down.
+  3️⃣ Disconnect electrical appliances if it’s safe to do so.
+  4️⃣ Listen to radio or official alerts for updates.
+  5️⃣ Do not return home until authorities say it’s safe.
+  ''',
+      'videoUrl': 'https://www.youtube.com/watch?v=1fXSPFv_xW8',
     },
     {
       'title': 'Fire Extinguisher Use',
       'desc':
-          'Remember PASS: Pull the pin, Aim at base, Squeeze handle, Sweep side to side.'
+          'Remember PASS: Pull the pin, Aim at base, Squeeze handle, Sweep side to side.',
+      'details': '''
+  1️⃣ Identify a safe escape route before approaching the fire.
+  2️⃣ Remember PASS:
+    • **Pull** the safety pin.
+    • **Aim** the nozzle at the base of the flames.
+    • **Squeeze** the handle to release the agent.
+    • **Sweep** the nozzle side to side until the fire is out.
+  3️⃣ If the fire grows or spreads, evacuate immediately and call 112.
+  ''',
+      'videoUrl': 'https://www.youtube.com/watch?v=lUojO1HvC8c',
     },
   ];
+
 
   @override
   void initState() {
@@ -386,52 +444,59 @@ class _ExploreScreenState extends State<ExploreScreen>
 
           return Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: Card(
-              color: isDark ? Colors.grey[850] : Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-              elevation: 5,
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    // Icon header
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: red.withOpacity(0.1),
-                        shape: BoxShape.circle,
+            child: GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => SafetyTipDetail(tip: tip),
+                  ),
+                );
+              },
+              child: Card(
+                color: isDark ? Colors.grey[850] : Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                elevation: 5,
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: red.withOpacity(0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(Icons.lightbulb, size: 50, color: red),
                       ),
-                      child: Icon(Icons.lightbulb, size: 50, color: red),
-                    ),
-                    const SizedBox(height: 20),
-                    // Title
-                    Text(
-                      tip['title']!,
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: isDark ? Colors.white : Colors.black87,
+                      const SizedBox(height: 20),
+                      Text(
+                        tip['title']!,
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: isDark ? Colors.white : Colors.black87,
+                        ),
+                        textAlign: TextAlign.center,
                       ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 12),
-                    // Description
-                    Flexible(
-                      child: SingleChildScrollView(
-                        child: Text(
-                          tip['desc']!,
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: isDark ? Colors.grey[300] : Colors.black54,
+                      const SizedBox(height: 12),
+                      Flexible(
+                        child: SingleChildScrollView(
+                          child: Text(
+                            tip['desc']!,
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: isDark ? Colors.grey[300] : Colors.black54,
+                            ),
+                            textAlign: TextAlign.center,
                           ),
-                          textAlign: TextAlign.center,
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),

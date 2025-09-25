@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -87,9 +88,9 @@ class _UserDashboardState extends State<UserDashboard> {
     super.initState();
     _loadUserDetails();
     getUserLocation().then((location) {
+      if (!mounted) return;
       setState(() {
         userLocation = location;
-        // Text(userLocation);
       });
     });
   }
@@ -122,6 +123,96 @@ class _UserDashboardState extends State<UserDashboard> {
     return loc;
   }
 
+  // Future<void> _submitEmergency() async {
+  //   try {
+  //     setState(() => _isLoading = true);
+
+  //     if (userToken == null) {
+  //       ScaffoldMessenger.of(context).showSnackBar(
+  //         const SnackBar(content: Text("User token is missing. Please log in again.")),
+  //       );
+  //       return;
+  //     }
+
+  //     final location = await _getLocation();
+  //     final uri = Uri.parse("https://swift-aid-backend.onrender.com/emergency/create");
+
+  //     final request = http.MultipartRequest('POST', uri)
+  //       ..fields['user_description'] = "I need help urgently"
+  //       ..fields['emergency_type'] = "Other"
+  //       ..fields['emergency_location'] = '[${location.longitude},${location.latitude}]'
+  //       ..headers['Authorization'] = 'Bearer $userToken';
+
+  //     // Load image from assets as bytes
+  //     ByteData byteData = await rootBundle.load('assets/icons/police_icon.jpeg');
+  //     Uint8List imageBytes = byteData.buffer.asUint8List();
+
+  //     // Detect MIME type
+  //     final mimeType = lookupMimeType('police_icon.jpeg', headerBytes: imageBytes)!.split('/');
+
+  //     // Add image directly from memory
+  //     request.files.add(http.MultipartFile.fromBytes(
+  //       'image',
+  //       imageBytes,
+  //       filename: 'police_icon.jpeg',
+  //       contentType: MediaType(mimeType[0], mimeType[1]),
+  //     ));
+
+  //     final streamedResponse = await request.send();
+  //     final response = await http.Response.fromStream(streamedResponse);
+
+  //     if (response.statusCode == 200 || response.statusCode == 201) {
+
+  //       var data = json.decode(response.body);
+  //       final responders = data["response"]["responders"];
+  //       final emergencyDetails = data["response"]["emergency_details"];
+  //       final emergency_id = data["response"]["emergency_id"];
+  //       print("emergencyyyy");
+  //       print(emergency_id);
+
+  //       final socket = SocketService().socket;
+
+  //       socket?.on('emergency-created', (payload) {
+
+  //         final emergencyId = payload['emergencyId'];
+  //         print('🚨🚨 Emergency created: $emergencyId');
+          
+  //         socket.emit('join-room', {
+  //           'roomId': emergencyId,
+  //           'userType': 'user',
+  //           'userId': userId,
+  //         });
+
+  //         ScaffoldMessenger.of(context).showSnackBar(
+  //           SnackBar(content: Text(payload['message'])),
+  //         );
+  //         // Optional: remove this listener if you only need it once
+  //         socket.off('emergency-created');
+  //       });
+
+  //       Navigator.push(
+  //         context,
+  //         MaterialPageRoute(builder: (_) => ResponderMapScreen(
+  //           responders: responders as Map<String, dynamic>,
+  //           emergencyDetails: emergencyDetails as Map<String, dynamic>,
+  //           emergencyId: emergency_id,
+  //         )),
+  //       );
+
+  //     } else {
+  //       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Failed to create request.")));
+  //     }
+
+  //   } catch (e) {
+  //     debugPrint("Error: ${e.toString()}");
+  //     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Something went wrong.")));
+
+  //   } finally {
+  //     setState(() => _isLoading = false);
+  //   }
+  // }
+
+
   Future<void> _submitEmergency() async {
     try {
       setState(() => _isLoading = true);
@@ -133,7 +224,48 @@ class _UserDashboardState extends State<UserDashboard> {
         return;
       }
 
+      final socket = SocketService().socket;
+      if (socket == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Socket not initialized.")),
+        );
+        return;
+      }
+
+      // Ensure socket is connected (best-effort)
+      try {
+        if (!(socket.connected == true)) {
+          final connectCompleter = Completer<void>();
+          socket.once('connect', (_) => connectCompleter.complete());
+          socket.connect();
+          await connectCompleter.future.timeout(const Duration(seconds: 5));
+          if (!mounted) return;
+        }
+      } catch (_) {
+        // ignore connect timeout; we'll still try listening
+      }
+
+      // Prepare a completer to wait for the 'emergency-created' event
+      final completer = Completer<Map<String, dynamic>>();
+      socket.once('emergency-created', (payload) {
+        try {
+          Map<String, dynamic> parsed;
+          if (payload is String) {
+            parsed = jsonDecode(payload) as Map<String, dynamic>;
+          } else if (payload is Map) {
+            parsed = Map<String, dynamic>.from(payload);
+          } else {
+            parsed = {'raw': payload};
+          }
+          if (!completer.isCompleted) completer.complete(parsed);
+        } catch (e) {
+          if (!completer.isCompleted) completer.completeError(e);
+        }
+      });
+
+      // Now send the HTTP multipart request (your existing code)
       final location = await _getLocation();
+      if (!mounted) return;
       final uri = Uri.parse("https://swift-aid-backend.onrender.com/emergency/create");
 
       final request = http.MultipartRequest('POST', uri)
@@ -142,14 +274,10 @@ class _UserDashboardState extends State<UserDashboard> {
         ..fields['emergency_location'] = '[${location.longitude},${location.latitude}]'
         ..headers['Authorization'] = 'Bearer $userToken';
 
-      // Load image from assets as bytes
       ByteData byteData = await rootBundle.load('assets/icons/police_icon.jpeg');
       Uint8List imageBytes = byteData.buffer.asUint8List();
-
-      // Detect MIME type
       final mimeType = lookupMimeType('police_icon.jpeg', headerBytes: imageBytes)!.split('/');
 
-      // Add image directly from memory
       request.files.add(http.MultipartFile.fromBytes(
         'image',
         imageBytes,
@@ -158,37 +286,56 @@ class _UserDashboardState extends State<UserDashboard> {
       ));
 
       final streamedResponse = await request.send();
+      if (!mounted) return;
       final response = await http.Response.fromStream(streamedResponse);
+      if (!mounted) return;
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-
-        var data = json.decode(response.body);
+        final data = json.decode(response.body);
         final responders = data["response"]["responders"];
         final emergencyDetails = data["response"]["emergency_details"];
-        final emergencyId = data["response"]["emergency_id"];
 
-        final socket = SocketService().socket;
-
-        socket?.on('emergency-created', (payload) {
-
-          final emergencyId = payload['emergencyId'];
-          print('🚨 Emergency created: $emergencyId');
-
+        // Wait for the socket event (use a reasonable timeout)
+        Map<String, dynamic> eventPayload;
+        try {
+          eventPayload = await completer.future.timeout(const Duration(seconds: 8));
+        } catch (e) {
+          // timed out or error parsing
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(payload['message'])),
+            const SnackBar(content: Text("Timed out waiting for server confirmation. Try again.")),
           );
+          // Option A: navigate anyway (without room join)
+          // Navigator.push(... pass null or fallback id)
+          return;
+        }
 
-          
-          // socket.emit('join-room', {
-          //   'roomId': emergencyId,
-          //   'userType': 'user',
-          //   'userId': userId,
-          // });
+        // Normalize emergency id field names
+        final emergencyId = eventPayload['emergencyId'];
+        print('🚨🚨 Emergency created: $emergencyId');
 
-          // Optional: remove this listener if you only need it once
-          socket.off('emergency-created');
+        if (emergencyId == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Server confirmed creation but didn't return an id.")),
+          );
+          return;
+        }
+
+        // Join the room with the id from the event
+        socket.emit('join-room', {
+          'roomId': emergencyId,
+          'userType': 'user',
+          'userId': userId,
         });
 
+        // Optional: show server message if available
+        if (eventPayload['message'] != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(eventPayload['message'].toString())),
+          );
+        }
+
+        // Navigate to the map screen after joining
+        if (!mounted) return;
         Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => ResponderMapScreen(
@@ -197,16 +344,14 @@ class _UserDashboardState extends State<UserDashboard> {
             emergencyId: emergencyId,
           )),
         );
-
       } else {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Failed to create request.")));
       }
-
     } catch (e) {
       debugPrint("Error: ${e.toString()}");
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Something went wrong.")));
-
     } finally {
+      if (!mounted) return;
       setState(() => _isLoading = false);
     }
   }

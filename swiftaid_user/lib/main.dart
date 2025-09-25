@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
-import '../screens/startupRedirectScreen.dart';
 import 'package:provider/provider.dart';
 import 'core/theme_provider.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
+
+import 'screens/onboarding/splash_screen.dart';
+String accessToken = const String.fromEnvironment("ACCESS_TOKEN");
 
 
 // late IO.Socket socket;
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-
-  String accessToken = const String.fromEnvironment("ACCESS_TOKEN");
   MapboxOptions.setAccessToken(accessToken);
 
   runApp(
@@ -44,7 +44,7 @@ class SwiftAidApp extends StatelessWidget {
         scaffoldBackgroundColor: Colors.black,
         textTheme: const TextTheme(bodyLarge: TextStyle(color: Colors.white)),
       ),
-      home: const StartupRedirectScreen(),
+      home: const SplashScreen(),
     );
   }
 }

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'onboarding_screens.dart'; // You can change this to login_screen later
+import '../startupRedirectScreen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -14,10 +14,10 @@ class _SplashScreenState extends State<SplashScreen> {
     super.initState();
 
     // Wait for 2 seconds, then go to HomeScreen
-    Future.delayed(const Duration(seconds: 3), () {
+    Future.delayed(const Duration(seconds: 2), () {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => const OnboardingScreen()),
+        MaterialPageRoute(builder: (context) => const StartupRedirectScreen()),
       );
 
     });

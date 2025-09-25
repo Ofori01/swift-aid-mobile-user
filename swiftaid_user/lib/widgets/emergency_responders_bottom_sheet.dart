@@ -8,12 +8,14 @@ import '../core/utils/utils.dart';
 class EmergencyRespondersBottomSheet extends StatefulWidget {
   final Map<String, dynamic> responders;
   final Map<String, dynamic> emergencyDetails;
+  final int? lockedResponderEta;
   final ScrollController scrollController;
 
   const EmergencyRespondersBottomSheet({
     super.key,
     required this.responders,
     required this.emergencyDetails,
+    this.lockedResponderEta,
     required this.scrollController,
   });
 
@@ -107,6 +109,35 @@ class _EmergencyRespondersBottomSheetState extends State<EmergencyRespondersBott
                   ),
                 ],
               ),
+              // if (widget.lockedResponderEta != null && widget.lockedResponderName != null)
+              //   Text(
+              //     "Closest responder: ${widget.lockedResponderName} • ${widget.lockedResponderEta} min away",
+              //     style: GoogleFonts.poppins(
+              //       fontSize: 16,
+              //       fontWeight: FontWeight.w600,
+              //       color: Colors.green,
+              //     ),
+              //   )
+              // else if (widget.lockedResponderEta != null)
+              //   Text(
+              //     "Closest responder is ${widget.lockedResponderEta} min away",
+              //     style: GoogleFonts.poppins(
+              //       fontSize: 16,
+              //       fontWeight: FontWeight.w600,
+              //       color: Colors.green,
+              //     ),
+              //   ),
+              if (widget.lockedResponderEta != null) ...[
+                const SizedBox(height: 6),
+                Text(
+                  "Closest responder is ${widget.lockedResponderEta} min away",
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.green,
+                  ),
+                ),
+              ],
 
               const Divider(height: 40),
               const SizedBox(height: 8),
@@ -181,6 +212,8 @@ class _EmergencyRespondersBottomSheetState extends State<EmergencyRespondersBott
                 itemBuilder: (context, index) {
                   final cat = categories[index];
                   final icon = getCategoryIcon(cat);
+                  final count = (widget.responders[cat] as List?)?.length ?? 0;
+
                   return GestureDetector(
                     onTap: () => setState(() => selectedCategory = cat),
                     child: Container(
@@ -194,9 +227,11 @@ class _EmergencyRespondersBottomSheetState extends State<EmergencyRespondersBott
                           Icon(icon.icon, color: icon.color, size: 28),
                           const SizedBox(width: 12),
                           Text(
-                            cat[0].toUpperCase() + cat.substring(1),
+                            '${cat[0].toUpperCase()}${cat.substring(1)} [$count]',
                             style: GoogleFonts.poppins(
-                                fontSize: 16, fontWeight: FontWeight.w500),
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
                           const Spacer(),
                           const Icon(Icons.arrow_forward_ios, size: 16),

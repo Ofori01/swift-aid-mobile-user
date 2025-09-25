@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import './dashboard/main_tabs.dart'; // or wherever your MainTabs screen is
-import './onboarding/splash_screen.dart';
+import './dashboard/main_tabs.dart'; 
+import 'onboarding/onboarding_screens.dart';
 
 class StartupRedirectScreen extends StatefulWidget {
   const StartupRedirectScreen({super.key});
@@ -31,7 +31,7 @@ class _StartupRedirectScreenState extends State<StartupRedirectScreen> {
       // User not logged in
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => const SplashScreen()),
+        MaterialPageRoute(builder: (_) => const OnboardingScreen()),
       );
     }
   }
