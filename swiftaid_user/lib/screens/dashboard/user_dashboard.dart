@@ -517,6 +517,8 @@ class _UserDashboardState extends State<UserDashboard> {
                                 _buildChip("Natural Disaster", Icons.apartment, const Color(0xFFC2F2E8)),
                                 _buildChip("Fire", Icons.local_fire_department, const Color(0xFFFFD6DA)),
                                 _buildChip("Rescue", Icons.sos, const Color(0xFFFFEDB1)),
+                                _buildChip("Crime", Icons.gavel, const Color(0xFFE53935)),
+                                _buildChip("Other", Icons.help_outline, const Color(0xFF9E9E9E)),
                               ],
                             ),
 

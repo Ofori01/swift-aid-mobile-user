@@ -143,60 +143,77 @@ class _ResponderMapScreenState extends State<ResponderMapScreen> {
 
 
   // --- update marker on ETA socket
-  Future<void> _updateResponderMarker(String id, double lng, double lat,
-      {int? etaMinutes}) async {
-    if (_annotationManager == null) return;
+  Future<void> _updateResponderMarker(
+  String id,
+  double lng,
+  double lat, {
+  int? etaMinutes,
+}) async {
+  if (_annotationManager == null) return;
 
-    // find responder’s role & name
-    final role = _findRoleById(id);
-    final name = _findNameById(id); // ★ helper below
+  final role = _findRoleById(id);
+  final name = _findNameById(id);
 
-    String assetPath;
-    switch (role) {
-      case 'police':
-        assetPath = 'assets/icons/police.png';
-        break;
-      case 'fire':
-        assetPath = 'assets/icons/fire.png';
-        break;
-      case 'ambulance':
-        assetPath = 'assets/icons/ambulance.png';
-        break;
-      default:
-        assetPath = 'assets/icons/location.png';
-    }
-
-    if (_responderMarkers.containsKey(id)) {
-      try {
-        await _annotationManager!.delete(_responderMarkers[id]!);
-      } catch (_) {}
-    }
-
-    final imageBytes = await _loadIcon(assetPath);
-    final isLocked = id == _lockedResponderId;
-    final newMarker = await _annotationManager!.create(
-      PointAnnotationOptions(
-        geometry: mbx.Point(coordinates: mbx.Position(lng, lat)),
-        image: imageBytes,
-        iconSize: isLocked ? 1.1 : 0.8,
-
-        // --- Label with ETA or name ---
-        textField: name.isNotEmpty && etaMinutes != null
-            ? '$name – ${etaMinutes}m'
-            : (etaMinutes != null ? '${etaMinutes}m' : name),
-
-        // --- Styling to stand out ---
-        textSize: 15,                                       
-        textOffset: [0, -1.8],                               
-        textColor: Colors.white.value,                      
-        textHaloColor: Colors.black.withOpacity(0.7).value,  
-        textHaloWidth: 3.0,                                  
-        textHaloBlur: 1.0,                                 
-      ),
-    );
-
-    _responderMarkers[id] = newMarker;
+  String assetPath;
+  switch (role) {
+    case 'police':
+      assetPath = 'assets/icons/police.png';
+      break;
+    case 'fire':
+      assetPath = 'assets/icons/fire.png';
+      break;
+    case 'ambulance':
+      assetPath = 'assets/icons/ambulance.png';
+      break;
+    default:
+      assetPath = 'assets/icons/location.png';
   }
+
+  final imageBytes = await _loadIcon(assetPath);
+  final isLocked = id == _lockedResponderId;
+
+  // Build the options for the new marker
+  final options = PointAnnotationOptions(
+    geometry: mbx.Point(coordinates: mbx.Position(lng, lat)),
+    image: imageBytes,
+    iconSize: isLocked ? 1.1 : 0.8,
+    textField: name.isNotEmpty && etaMinutes != null
+        ? '$name – ${etaMinutes}m'
+        : (etaMinutes != null ? '${etaMinutes}m' : name),
+    textSize: 15,
+    // use nullable doubles if the API expects them:
+    textOffset: <double?>[0.0, -1.8],
+    textColor: Colors.white.value,
+    textHaloColor: Colors.black.withOpacity(0.7).value,
+    textHaloWidth: 3.0,
+    textHaloBlur: 1.0,
+  );
+
+  final existing = _responderMarkers[id];
+
+  if (existing != null) {
+    // create new marker first (so there's no empty gap), then delete the old one
+    try {
+      final newMarker = await _annotationManager!.create(options);
+      _responderMarkers[id] = newMarker;
+
+      // delete the older one (best-effort)
+      try {
+        await _annotationManager!.delete(existing);
+      } catch (e) {
+        debugPrint('Failed to delete old marker: $e');
+      }
+    } catch (e) {
+      debugPrint('Failed to recreate marker: $e');
+    }
+    return;
+  }
+
+  // If no existing marker, just create
+  final marker = await _annotationManager!.create(options);
+  _responderMarkers[id] = marker;
+}
+
 
   // ★ helper to get responder name by id
   String _findNameById(String responderId) {
