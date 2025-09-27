@@ -13,7 +13,6 @@ class _SplashScreenState extends State<SplashScreen> {
   void initState() {
     super.initState();
 
-    // Wait for 2 seconds, then go to HomeScreen
     Future.delayed(const Duration(seconds: 2), () {
       Navigator.pushReplacement(
         context,
@@ -36,7 +35,7 @@ class _SplashScreenState extends State<SplashScreen> {
               width: 150,
               height: 150,
             ),
-            SizedBox(height: 10), // spacing between logo and text
+            SizedBox(height: 10), 
             Text(
               'SwiftAid',
               style: TextStyle(

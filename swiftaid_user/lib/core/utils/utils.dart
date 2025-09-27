@@ -19,7 +19,6 @@ Future<String> getAddressFromCoordinates(double lat, double lng) async {
   }
 }
 
-// Icon by emergency type
 IconData getEmergencyTypeIcon(String type) {
   switch (type.toLowerCase()) {
     case 'medical':

@@ -84,14 +84,14 @@ class _EmergencyRespondersBottomSheetState extends State<EmergencyRespondersBott
               const SizedBox(height: 8),
 
               Row(
-                mainAxisAlignment: MainAxisAlignment.center, // Center horizontally
+                mainAxisAlignment: MainAxisAlignment.center, 
                 children: [
-                  Icon(  // Emergency icon
+                  Icon( 
                     Icons.warning_amber_rounded,
                     color: Colors.amber,
                     size: 24,
                   ),
-                  SizedBox(width: 8), // Spacing between icon and text
+                  SizedBox(width: 8),
                   Text(
                     "HELP IS ON THE WAY!!!",  
                     style: GoogleFonts.poppins(
@@ -109,24 +109,6 @@ class _EmergencyRespondersBottomSheetState extends State<EmergencyRespondersBott
                   ),
                 ],
               ),
-              // if (widget.lockedResponderEta != null && widget.lockedResponderName != null)
-              //   Text(
-              //     "Closest responder: ${widget.lockedResponderName} • ${widget.lockedResponderEta} min away",
-              //     style: GoogleFonts.poppins(
-              //       fontSize: 16,
-              //       fontWeight: FontWeight.w600,
-              //       color: Colors.green,
-              //     ),
-              //   )
-              // else if (widget.lockedResponderEta != null)
-              //   Text(
-              //     "Closest responder is ${widget.lockedResponderEta} min away",
-              //     style: GoogleFonts.poppins(
-              //       fontSize: 16,
-              //       fontWeight: FontWeight.w600,
-              //       color: Colors.green,
-              //     ),
-              //   ),
               if (widget.lockedResponderEta != null) ...[
                 const SizedBox(height: 6),
                 Text(
@@ -203,7 +185,6 @@ class _EmergencyRespondersBottomSheetState extends State<EmergencyRespondersBott
               const Divider(height: 40),
               const SizedBox(height: 8),
 
-              // Category list as before...
               ListView.separated(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
@@ -279,7 +260,6 @@ class _EmergencyRespondersBottomSheetState extends State<EmergencyRespondersBott
         ),
         const SizedBox(height: 8),
 
-        // ✅ Constrain the ListView using Expanded
         Expanded(
           child: ListView.builder(
             controller: widget.scrollController,

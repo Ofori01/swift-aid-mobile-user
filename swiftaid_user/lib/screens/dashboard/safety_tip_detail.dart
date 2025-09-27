@@ -63,7 +63,6 @@ class SafetyTipDetail extends StatelessWidget {
 
             const SizedBox(height: 28),
 
-            // ---- Step-by-Step Section ----
             Text(
               'Step-by-Step Guide',
               style: TextStyle(
@@ -131,7 +130,6 @@ class SafetyTipDetail extends StatelessWidget {
 
             const SizedBox(height: 28),
 
-            // ---- Optional video ----
             if (videoId != null) ...[
               Text(
                 'Watch Video Guide',

@@ -7,8 +7,6 @@ import 'screens/onboarding/splash_screen.dart';
 String accessToken = const String.fromEnvironment("ACCESS_TOKEN");
 
 
-// late IO.Socket socket;
-
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   MapboxOptions.setAccessToken(accessToken);

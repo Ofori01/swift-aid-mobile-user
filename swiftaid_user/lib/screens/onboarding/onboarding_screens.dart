@@ -46,26 +46,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // final themeProvider = Provider.of<ThemeProvider>(context);
-    // final isDark = themeProvider.isDarkMode;
 
     return Scaffold(
-      // appBar: AppBar(
-      //   backgroundColor: Colors.transparent,
-      //   elevation: 0,
-      //   actions: [
-      //     Row(
-      //       children: [
-      //         Icon(isDark ? Icons.dark_mode : Icons.light_mode),
-      //         Switch(
-      //           value: isDark,
-      //           onChanged: (val) => themeProvider.toggleTheme(val),
-      //         ),
-      //       ],
-      //     ),
-      //     const SizedBox(width: 10),
-      //   ],
-      // ),
       body: SafeArea(
         child: Column(
           children: [
@@ -150,5 +132,4 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       ),
     );
   }
-
 }

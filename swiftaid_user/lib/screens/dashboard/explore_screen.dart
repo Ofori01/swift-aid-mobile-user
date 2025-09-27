@@ -10,7 +10,6 @@ import 'package:swiftaid_user/core/utils/overpass_service.dart';
 import 'safety_tip_detail.dart';
 
 
-/// Simple POI model with distance & ETA helpers
 class POI {
   final String name;
   final latLng.LatLng location;
@@ -404,7 +403,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                     ),
                   ),
                   const Divider(height: 1),
-                  // ✅ Expanded ensures the list uses only remaining space
+                  
                   Expanded(
                     child: ListView.builder(
                       controller: scrollController,

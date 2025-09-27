@@ -29,9 +29,6 @@ class _EmergencyRequestScreenState extends State<EmergencyRequestScreen> {
   String? userId;
   String userLocation = "Fetching location...";
   late String selectedType;
-  // bool _waitingForRoom = false;
-
-
 
   @override
   void initState() {
@@ -122,7 +119,6 @@ class _EmergencyRequestScreenState extends State<EmergencyRequestScreen> {
 
   Future<void> _submitEmergency() async {
     try {
-      // Immediately show loading overlay
       setState(() => _isLoading = true);
 
       if (_descriptionController.text.isEmpty || _image == null) {
@@ -147,7 +143,6 @@ class _EmergencyRequestScreenState extends State<EmergencyRequestScreen> {
         return;
       }
 
-      // Ensure socket is connected
       try {
         if (!(socket.connected == true)) {
           final connectCompleter = Completer<void>();
@@ -160,7 +155,6 @@ class _EmergencyRequestScreenState extends State<EmergencyRequestScreen> {
         // ignore connect timeout; we'll still try listening
       }
 
-      // Prepare a completer to wait for the 'emergency-created' event
       final completer = Completer<Map<String, dynamic>>();
       socket.once('emergency-created', (payload) {
         try {
@@ -178,7 +172,6 @@ class _EmergencyRequestScreenState extends State<EmergencyRequestScreen> {
         }
       });
 
-      // -------- Send HTTP multipart request --------
       final location = await _getLocation();
       if (!mounted) return;
 
@@ -208,7 +201,6 @@ class _EmergencyRequestScreenState extends State<EmergencyRequestScreen> {
         final responders = data["response"]["responders"];
         final emergencyDetails = data["response"]["emergency_details"];
 
-        // Wait for the socket confirmation (8-second timeout)
         Map<String, dynamic> eventPayload;
         try {
           eventPayload = await completer.future.timeout(const Duration(seconds: 8));
@@ -227,7 +219,6 @@ class _EmergencyRequestScreenState extends State<EmergencyRequestScreen> {
           return;
         }
 
-        // Join the emergency room
         socket.emit('join-room', {
           'roomId': emergencyId,
           'userType': 'user',

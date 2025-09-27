@@ -142,7 +142,6 @@ class _UserDashboardState extends State<UserDashboard> {
         return;
       }
 
-      // Ensure socket is connected (best-effort)
       try {
         if (!(socket.connected == true)) {
           final connectCompleter = Completer<void>();
@@ -155,7 +154,6 @@ class _UserDashboardState extends State<UserDashboard> {
         // ignore connect timeout; we'll still try listening
       }
 
-      // Prepare a completer to wait for the 'emergency-created' event
       final completer = Completer<Map<String, dynamic>>();
       socket.once('emergency-created', (payload) {
         try {
@@ -173,7 +171,6 @@ class _UserDashboardState extends State<UserDashboard> {
         }
       });
 
-      // Now send the HTTP multipart request (your existing code)
       final location = await _getLocation();
       if (!mounted) return;
       final uri = Uri.parse("https://swift-aid-backend.onrender.com/emergency/create");
@@ -205,21 +202,16 @@ class _UserDashboardState extends State<UserDashboard> {
         final responders = data["response"]["responders"];
         final emergencyDetails = data["response"]["emergency_details"];
 
-        // Wait for the socket event (use a reasonable timeout)
         Map<String, dynamic> eventPayload;
         try {
           eventPayload = await completer.future.timeout(const Duration(seconds: 8));
         } catch (e) {
-          // timed out or error parsing
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text("Timed out waiting for server confirmation. Try again.")),
           );
-          // Option A: navigate anyway (without room join)
-          // Navigator.push(... pass null or fallback id)
           return;
         }
 
-        // Normalize emergency id field names
         final emergencyId = eventPayload['emergencyId'];
         print('🚨🚨 Emergency created: $emergencyId');
 
@@ -230,21 +222,18 @@ class _UserDashboardState extends State<UserDashboard> {
           return;
         }
 
-        // Join the room with the id from the event
         socket.emit('join-room', {
           'roomId': emergencyId,
           'userType': 'user',
           'userId': userId,
         });
 
-        // Optional: show server message if available
         if (eventPayload['message'] != null) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(eventPayload['message'].toString())),
           );
         }
 
-        // Navigate to the map screen after joining
         if (!mounted) return;
         Navigator.push(
           context,
@@ -276,11 +265,9 @@ class _UserDashboardState extends State<UserDashboard> {
       body: SafeArea(
         child: Column(
           children: [
-            // 🔒 Fixed Header: Location + Notification
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12),
               decoration: BoxDecoration(
-                // color: theme.scaffoldBackgroundColor,
                 color: theme.brightness == Brightness.dark ? Colors.grey[900] : Colors.grey[200],
                 boxShadow: [
                   BoxShadow(
@@ -312,7 +299,6 @@ class _UserDashboardState extends State<UserDashboard> {
             ),
             
 
-            // 🔄 Scrollable Responsive Body
             Expanded(
               child: LayoutBuilder(
                 builder: (context, constraints) {
@@ -325,8 +311,6 @@ class _UserDashboardState extends State<UserDashboard> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             
-                            // Emergency Header
-                            // Welcome + Emergency Header
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -416,7 +400,6 @@ class _UserDashboardState extends State<UserDashboard> {
                             ),
                             const SizedBox(height: 10),
 
-                            // Emergency Type Chips
                             Wrap(
                               spacing: 5,
                               runSpacing: 10,

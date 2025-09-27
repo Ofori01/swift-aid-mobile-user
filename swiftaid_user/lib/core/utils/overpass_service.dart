@@ -1,8 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
-/// Returns a list of POI maps of the form:
-/// { 'name': String?, 'type': String, 'lat': double, 'lon': double }
+
 class OverpassService {
   /// radius in meters
   static Future<List<Map<String, dynamic>>> fetchPOIs(
@@ -33,7 +32,6 @@ class OverpassService {
 
     final List<Map<String, dynamic>> pois = [];
     for (var e in elements) {
-      // node: lat/lon directly; way/relation: center exists
       double? plat = (e['lat'] is num) ? (e['lat'] as num).toDouble() : null;
       double? plon = (e['lon'] is num) ? (e['lon'] as num).toDouble() : null;
 
@@ -45,7 +43,7 @@ class OverpassService {
         }
       }
 
-      if (plat == null || plon == null) continue; // skip if no coords
+      if (plat == null || plon == null) continue; 
 
       final tags = e['tags'] as Map<String, dynamic>?;
       final name = tags != null ? (tags['name'] as String?) : null;

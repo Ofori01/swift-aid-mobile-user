@@ -22,7 +22,6 @@ class _StartupRedirectScreenState extends State<StartupRedirectScreen> {
     final token = prefs.getString('authToken');
 
     if (token != null && token.isNotEmpty) {
-      // User is logged in
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const MainTabs()),

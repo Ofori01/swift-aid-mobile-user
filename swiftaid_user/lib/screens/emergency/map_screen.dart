@@ -40,7 +40,6 @@ class _ResponderMapScreenState extends State<ResponderMapScreen> {
 
   final Map<String, PointAnnotation> _responderMarkers = {};
 
-  // locked responder (id) and its last known coords
   String? _lockedResponderId;
   double? _lockedResponderLng;
   double? _lockedResponderLat;
@@ -55,7 +54,6 @@ class _ResponderMapScreenState extends State<ResponderMapScreen> {
   Future<void> _initSocketAndLocation() async {
     await _determinePosition();
 
-    // pick the fastest responder only once unless dispatch changes it
     _lockedResponderId ??= _findFastestResponderId();
     if (_lockedResponderId != null) {
       final coords = _getResponderCoordsById(_lockedResponderId!);
@@ -114,7 +112,6 @@ class _ResponderMapScreenState extends State<ResponderMapScreen> {
           });
         }
 
-        // Let the user know a responder has arrived
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -126,9 +123,7 @@ class _ResponderMapScreenState extends State<ResponderMapScreen> {
           );
         }
 
-        // ✅ Wait a bit so the user can see the arrival,
-        //    then navigate back to the dashboard.
-        Future.delayed(const Duration(seconds: 10), () {
+        Future.delayed(const Duration(seconds: 7), () {
           if (mounted) {
             Navigator.pushAndRemoveUntil(
               context,
@@ -142,80 +137,73 @@ class _ResponderMapScreenState extends State<ResponderMapScreen> {
   }
 
 
-  // --- update marker on ETA socket
   Future<void> _updateResponderMarker(
-  String id,
-  double lng,
-  double lat, {
-  int? etaMinutes,
-}) async {
-  if (_annotationManager == null) return;
+    String id,
+    double lng,
+    double lat, {
+    int? etaMinutes,
+  }) async {
+    if (_annotationManager == null) return;
 
-  final role = _findRoleById(id);
-  final name = _findNameById(id);
+    final role = _findRoleById(id);
+    final name = _findNameById(id);
 
-  String assetPath;
-  switch (role) {
-    case 'police':
-      assetPath = 'assets/icons/police.png';
-      break;
-    case 'fire':
-      assetPath = 'assets/icons/fire.png';
-      break;
-    case 'ambulance':
-      assetPath = 'assets/icons/ambulance.png';
-      break;
-    default:
-      assetPath = 'assets/icons/location.png';
-  }
-
-  final imageBytes = await _loadIcon(assetPath);
-  final isLocked = id == _lockedResponderId;
-
-  // Build the options for the new marker
-  final options = PointAnnotationOptions(
-    geometry: mbx.Point(coordinates: mbx.Position(lng, lat)),
-    image: imageBytes,
-    iconSize: isLocked ? 1.1 : 0.8,
-    textField: name.isNotEmpty && etaMinutes != null
-        ? '$name – ${etaMinutes}m'
-        : (etaMinutes != null ? '${etaMinutes}m' : name),
-    textSize: 15,
-    // use nullable doubles if the API expects them:
-    textOffset: <double?>[0.0, -1.8],
-    textColor: Colors.white.value,
-    textHaloColor: Colors.black.withOpacity(0.7).value,
-    textHaloWidth: 3.0,
-    textHaloBlur: 1.0,
-  );
-
-  final existing = _responderMarkers[id];
-
-  if (existing != null) {
-    // create new marker first (so there's no empty gap), then delete the old one
-    try {
-      final newMarker = await _annotationManager!.create(options);
-      _responderMarkers[id] = newMarker;
-
-      // delete the older one (best-effort)
-      try {
-        await _annotationManager!.delete(existing);
-      } catch (e) {
-        debugPrint('Failed to delete old marker: $e');
-      }
-    } catch (e) {
-      debugPrint('Failed to recreate marker: $e');
+    String assetPath;
+    switch (role) {
+      case 'police':
+        assetPath = 'assets/icons/police.png';
+        break;
+      case 'fire':
+        assetPath = 'assets/icons/fire.png';
+        break;
+      case 'ambulance':
+        assetPath = 'assets/icons/ambulance.png';
+        break;
+      default:
+        assetPath = 'assets/icons/location.png';
     }
-    return;
+
+    final imageBytes = await _loadIcon(assetPath);
+    final isLocked = id == _lockedResponderId;
+
+    final options = PointAnnotationOptions(
+      geometry: mbx.Point(coordinates: mbx.Position(lng, lat)),
+      image: imageBytes,
+      iconSize: isLocked ? 1.1 : 0.8,
+      textField: name.isNotEmpty && etaMinutes != null
+          ? '$name – ${etaMinutes}m'
+          : (etaMinutes != null ? '${etaMinutes}m' : name),
+      textSize: 15,
+      textOffset: <double?>[0.0, -1.8],
+      textColor: Colors.white.value,
+      textHaloColor: Colors.black.withOpacity(0.7).value,
+      textHaloWidth: 3.0,
+      textHaloBlur: 1.0,
+    );
+
+    final existing = _responderMarkers[id];
+
+    if (existing != null) {
+      try {
+        final newMarker = await _annotationManager!.create(options);
+        _responderMarkers[id] = newMarker;
+
+        try {
+          await _annotationManager!.delete(existing);
+        } catch (e) {
+          debugPrint('Failed to delete old marker: $e');
+        }
+      } catch (e) {
+        debugPrint('Failed to recreate marker: $e');
+      }
+      return;
+    }
+
+    final marker = await _annotationManager!.create(options);
+    _responderMarkers[id] = marker;
   }
 
-  // If no existing marker, just create
-  final marker = await _annotationManager!.create(options);
-  _responderMarkers[id] = marker;
-}
 
-
-  // ★ helper to get responder name by id
   String _findNameById(String responderId) {
     final sources = ['police_units', 'fire_trucks', 'ambulances'];
     for (final key in sources) {
@@ -252,7 +240,7 @@ class _ResponderMapScreenState extends State<ResponderMapScreen> {
     if ((responders['ambulances'] as List?)?.any(match) ?? false) {
       return 'ambulance';
     }
-    return 'default'; // fallback if not found
+    return 'default'; 
   }
 
   String? _findFastestResponderId() {
@@ -331,7 +319,6 @@ class _ResponderMapScreenState extends State<ResponderMapScreen> {
       await _addResponderMarkers();
       await _flyToUser();
 
-      // if we already have locked responder coords, draw route and frame
       if (_lockedResponderLat != null && _lockedResponderLng != null) {
         await _updateRouteAndFrame();
       }
@@ -403,7 +390,6 @@ class _ResponderMapScreenState extends State<ResponderMapScreen> {
     return bytes.buffer.asUint8List();
   }
 
-  // --- add name + travelTime(min) when first drawing responders
   Future<void> _addResponderMarkers() async {
     final responders = widget.responders;
 
@@ -478,7 +464,6 @@ class _ResponderMapScreenState extends State<ResponderMapScreen> {
 
     await _polylineManager!.deleteAll();
 
-    // Fetch a road-following route
     final positions = await _fetchRoute(
       _geoPosition!.longitude,
       _geoPosition!.latitude,
@@ -499,7 +484,6 @@ class _ResponderMapScreenState extends State<ResponderMapScreen> {
 
 
   double _computeDistanceMeters(double lat1, double lng1, double lat2, double lng2) {
-    // use Geolocator helper which returns meters
     return Geolocator.distanceBetween(lat1, lng1, lat2, lng2);
   }
 
@@ -514,7 +498,6 @@ class _ResponderMapScreenState extends State<ResponderMapScreen> {
 
     final dist = _computeDistanceMeters(userLat, userLng, responderLat, responderLng);
 
-    // heuristics for zoom (approx)
     double zoom;
     if (dist > 50000) {
       zoom = 8;
@@ -553,67 +536,66 @@ class _ResponderMapScreenState extends State<ResponderMapScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // return WillPopScope(
-    // onWillPop: () async {
-    //   // show a message instead of leaving the screen
-    //   ScaffoldMessenger.of(context).showSnackBar(
-    //     const SnackBar(
-    //       content: Text('You cannot leave while an emergency is active.'),
-    //     ),
-    //   );
-    //   return false; // prevent pop
-    // },
-    // child:  Scaffold(
-    return Scaffold(
-      body: _geoPosition == null
-          ? const Center(child: CircularProgressIndicator())
-          : Stack(
-              children: [
-                MapWidget(
-                  key: const ValueKey("mapbox-map"),
-                  styleUri: MapboxStyles.MAPBOX_STREETS,
-                  cameraOptions: mbx.CameraOptions(
-                    center: mbx.Point(
-                      coordinates: mbx.Position(
-                        _geoPosition!.longitude,
-                        _geoPosition!.latitude,
+    return WillPopScope(
+      onWillPop: () async {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('You cannot leave while an emergency is active.'),
+          ),
+        );
+        return false; 
+      },
+      child:  Scaffold(
+        body: _geoPosition == null
+            ? const Center(child: CircularProgressIndicator())
+            : Stack(
+                children: [
+                  MapWidget(
+                    key: const ValueKey("mapbox-map"),
+                    styleUri: MapboxStyles.MAPBOX_STREETS,
+                    cameraOptions: mbx.CameraOptions(
+                      center: mbx.Point(
+                        coordinates: mbx.Position(
+                          _geoPosition!.longitude,
+                          _geoPosition!.latitude,
+                        ),
                       ),
+                      zoom: 14,
                     ),
-                    zoom: 14,
-                  ),
-                  mapOptions: MapOptions(
-                    pixelRatio: MediaQuery.of(context).devicePixelRatio,
-                  ),
-                  onMapCreated: (mapboxMap) async {
-                    _mapboxMap = mapboxMap;
-                    // annotation managers
-                    _annotationManager = await mapboxMap.annotations.createPointAnnotationManager();
-                    _polylineManager ??= await mapboxMap.annotations.createPolylineAnnotationManager();
+                    mapOptions: MapOptions(
+                      pixelRatio: MediaQuery.of(context).devicePixelRatio,
+                    ),
+                    onMapCreated: (mapboxMap) async {
+                      _mapboxMap = mapboxMap;
+                      // annotation managers
+                      _annotationManager = await mapboxMap.annotations.createPointAnnotationManager();
+                      _polylineManager ??= await mapboxMap.annotations.createPolylineAnnotationManager();
 
-                    // add markers (user + responders)
-                    await _addUserMarker();
-                    await _addResponderMarkers();
+                      // add markers (user + responders)
+                      await _addUserMarker();
+                      await _addResponderMarkers();
 
-                    // if locked responder known, draw route and frame
-                    if (_lockedResponderLat != null && _lockedResponderLng != null) {
-                      await _updateRouteAndFrame();
-                    }
-                  },
-                ),
-                DraggableScrollableSheet(
-                  initialChildSize: 0.4,
-                  minChildSize: 0.25,
-                  maxChildSize: 0.9,
-                  builder: (context, scrollController) =>
-                      EmergencyRespondersBottomSheet(
-                    responders: widget.responders,
-                    emergencyDetails: widget.emergencyDetails,
-                    lockedResponderEta: _lockedResponderEta,
-                    scrollController: scrollController,
+                      // if locked responder known, draw route and frame
+                      if (_lockedResponderLat != null && _lockedResponderLng != null) {
+                        await _updateRouteAndFrame();
+                      }
+                    },
                   ),
-                ),
-              ],
-            ),
+                  DraggableScrollableSheet(
+                    initialChildSize: 0.4,
+                    minChildSize: 0.25,
+                    maxChildSize: 0.9,
+                    builder: (context, scrollController) =>
+                        EmergencyRespondersBottomSheet(
+                      responders: widget.responders,
+                      emergencyDetails: widget.emergencyDetails,
+                      lockedResponderEta: _lockedResponderEta,
+                      scrollController: scrollController,
+                    ),
+                  ),
+                ],
+              ),
+      )
     );
   }
 
